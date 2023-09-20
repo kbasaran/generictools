@@ -8,7 +8,7 @@ from scipy.ndimage import gaussian_filter
 from scipy import signal as sig
 import time
 
-"jkyf"
+
 class TestSignal():
     """
     Create a signal object that bears methods to create the
