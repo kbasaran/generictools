@@ -3,7 +3,7 @@ import sys
 import numpy as np
 from operator import methodcaller
 from functools import partial
-import signal_tools
+import generictools.signal_tools
 from functools import lru_cache
 
 from PySide6 import QtCore as qtc
