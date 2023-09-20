@@ -585,15 +585,21 @@ class Curve:
         return self._visible
 
 
-def check_if_sorted_and_valid(flat_array):
+def check_if_sorted_and_valid(frequencies):
     # check if array of numbers
-    array = np.array(flat_array, dtype=float)
+    array = np.array(frequencies, dtype=float)
 
     is_sorted = lambda a: np.all(a[:-1] < a[1:])
     if not is_sorted(array):
         raise ValueError("Frequency points are not sorted")
-    if array[0] <= 0:
+    if array is None or array[0] <= 0:
         raise ValueError("Negatives or zeros are not accepted as frequency points.")
+        
+    # ---- validate size
+    if len(frequencies) < 2:
+        raise ValueError("Curve needs to have more than one frequency point."
+                         f"Frequency points: {frequencies}")
+
 
 def discover_fs_from_time_signature(curve):
     if not any(["[ms]" in string for string in curve.klippel_attrs["unresolved_parts"]]):
