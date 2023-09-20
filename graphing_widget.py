@@ -1,7 +1,6 @@
 import logging
 import sys
 import numpy as np
-from operator import methodcaller
 from functools import partial
 from generictools import signal_tools
 from functools import lru_cache
@@ -12,7 +11,6 @@ from matplotlib.backends.backend_qtagg import (
     FigureCanvas, NavigationToolbar2QT as NavigationToolbar)
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
-import matplotlib.patheffects as mpe
 plt.rcParams["figure.constrained_layout.h_pad"] = 0.3
 plt.rcParams["figure.constrained_layout.w_pad"] = 0.4
 
