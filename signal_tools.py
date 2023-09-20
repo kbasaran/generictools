@@ -6,6 +6,7 @@ import logging
 from scipy import interpolate as intp
 from scipy.ndimage import gaussian_filter
 from scipy import signal as sig
+import time
 
 
 class TestSignal():
