@@ -538,6 +538,9 @@ class Curve:
         val = prefix if isinstance(prefix, str) else None
         self._identification["prefix"] = val
 
+    def get_name_prefix(self):
+        return self._identification["prefix"]
+
     def clear_name_suffixes(self):
         self._identification["suffixes"].clear()
 
