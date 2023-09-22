@@ -47,7 +47,7 @@ class MatplotlibWidget(qtw.QWidget):
         layout.addWidget(self.canvas)
 
         self.ax = self.canvas.figure.subplots()
-            
+        self.set_grid_type()
         self.lines_in_order = []
 
         # https://matplotlib.org/stable/api/_as_gen/matplotlib._lines.line2d.html
