@@ -20,6 +20,8 @@ logging.basicConfig(level=logging.INFO)
 
 
 class MatplotlibWidget(qtw.QWidget):
+    signal_reference_curve_state = qtc.Signal(bool)
+
     def __init__(self, settings):
         self.app_settings = settings
         super().__init__()
@@ -90,7 +92,8 @@ class MatplotlibWidget(qtw.QWidget):
         # Modify curve before pasting if graph has a reference curve
         x_in, y_in = data
         if self._ref_index_and_curve:
-            ref_y_intp = self.reference_curve_interpolated(tuple(x_in))
+            reference_curve_x, reference_curve_y = self._ref_index_and_curve[1].get_xy()
+            ref_y_intp = self.reference_curve_interpolated(tuple(x_in), tuple(reference_curve_x), tuple(reference_curve_y))
             y_in = y_in - ref_y_intp
 
         # Paste the curve into graph
@@ -118,35 +121,35 @@ class MatplotlibWidget(qtw.QWidget):
             self.update_figure(recalculate_limits=False)
 
     @lru_cache
-    def reference_curve_interpolated(self, x:tuple):
-        ref_x, ref_y = self._ref_index_and_curve[1].get_xy()
-        return np.interp(np.log(x), np.log(ref_x), ref_y, left=np.nan, right=np.nan)
+    def reference_curve_interpolated(self, x:tuple, reference_curve_x:tuple, reference_curve_y:tuple):
+        return np.interp(np.log(x), np.log(reference_curve_x), reference_curve_y, left=np.nan, right=np.nan)
          
     @qtc.Slot()
     def toggle_reference_curve(self, ref_index_and_curve:tuple):
         if ref_index_and_curve:
+            reference_curve_x, reference_curve_y = ref_index_and_curve[1].get_xy()
+
             self._ref_index_and_curve = ref_index_and_curve
             for line2d in self.ax.get_lines():
                 x, y = line2d.get_xdata(), line2d.get_ydata()
-                ref_y_intp = self.reference_curve_interpolated(tuple(x))
+                ref_y_intp = self.reference_curve_interpolated(tuple(x), tuple(reference_curve_x), tuple(reference_curve_y))
                 line2d.set_ydata(y - ref_y_intp)
 
             self.hide_show_line2d({self._ref_index_and_curve[0]: False})
 
-            self.update_figure()
-
         else:
+            reference_curve_x, reference_curve_y = self._ref_index_and_curve[1].get_xy()
             for line2d in self.ax.get_lines():
                 x, y = line2d.get_xdata(), line2d.get_ydata()
-                ref_y_intp = self.reference_curve_interpolated(tuple(x))
+                ref_y_intp = self.reference_curve_interpolated(tuple(x), tuple(reference_curve_x), tuple(reference_curve_y))
                 line2d.set_ydata(y + ref_y_intp)
 
             self.hide_show_line2d({self._ref_index_and_curve[0]: True})
 
             self._ref_index_and_curve = None
-            self.update_figure()
 
-        self.reference_curve_interpolated.cache_clear()
+        self.signal_reference_curve_state.emit(self._ref_index_and_curve is not None)
+        self.update_figure()
 
     def show_legend_ordered(self):
         if self.app_settings.max_legend_size > 0:
