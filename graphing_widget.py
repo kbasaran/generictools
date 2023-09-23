@@ -21,20 +21,22 @@ logging.basicConfig(level=logging.INFO)
 
 class MatplotlibWidget(qtw.QWidget):
     signal_reference_curve_state = qtc.Signal(bool)
+    available_styles = list(plt.style.available)
 
     def __init__(self, settings):
         self.app_settings = settings
         super().__init__()
         layout = qtw.QVBoxLayout(self)
-        self.available_styles = list(plt.style.available)
         self._ref_index_and_curve = None
 
+        # ---- Set the desired style
         desired_style = self.app_settings.matplotlib_style
         if desired_style in plt.style.available:
             plt.style.use(desired_style)
         else:
             raise KeyError(f"Desired style '{desired_style}' not available.")
 
+        # ---- Create the figure and axes
         fig = Figure()
         fig.set_layout_engine("constrained")
         self.canvas = FigureCanvas(fig)
@@ -48,7 +50,7 @@ class MatplotlibWidget(qtw.QWidget):
 
         self.ax = self.canvas.figure.subplots()
         self.set_grid_type()
-        self.lines_in_order = []
+        self.line_indexes_in_screen_order = []
 
         # https://matplotlib.org/stable/api/_as_gen/matplotlib._lines.line2d.html
 
@@ -98,7 +100,7 @@ class MatplotlibWidget(qtw.QWidget):
 
         # Paste the curve into graph
         line, = self.ax.semilogx(x_in, y_in, label=label, **line2d_kwargs)
-        self.lines_in_order.insert(i, line)
+        self.line_indexes_in_screen_order.insert(i, line)
 
         self.update_line_zorders()
         if update_figure:
@@ -113,7 +115,7 @@ class MatplotlibWidget(qtw.QWidget):
                 self._ref_index_and_curve[0] -= sum(i < self._ref_index_and_curve[0] for i in ix)  # summing booleans
 
         for i in reversed(ix):    
-            line = self.lines_in_order.pop(i)
+            line = self.line_indexes_in_screen_order.pop(i)
             line.remove()
         
         self.update_line_zorders()
@@ -154,7 +156,7 @@ class MatplotlibWidget(qtw.QWidget):
     def show_legend_ordered(self):
         if self.app_settings.max_legend_size > 0:
             handles = []
-            iterator = iter(self.lines_in_order)
+            iterator = iter(self.line_indexes_in_screen_order)
             while len(handles) < self.app_settings.max_legend_size:
                 line = next(iterator, None)
                 if line is None:
@@ -162,9 +164,9 @@ class MatplotlibWidget(qtw.QWidget):
                 if line.get_alpha() in (None, 1):
                     handles.append(line)
         else:
-            handles = self.lines_in_order
+            handles = self.line_indexes_in_screen_order
             
-        # visible_lines = [line for line in self.lines_in_order if line.get_alpha() in (None, 1)]
+        # visible_lines = [line for line in self.line_indexes_in_screen_order if line.get_alpha() in (None, 1)]
         # handles = visible_lines[:self.app_settings.max_legend_size]
         labels = [line.get_label() for line in handles]
 
@@ -180,30 +182,30 @@ class MatplotlibWidget(qtw.QWidget):
         # each number in the new_positions is the index before location change. index in the list is the new location.
         lines_reordered = []
         for i_after, i_before in enumerate(new_positions):
-            lines_reordered.append(self.lines_in_order[i_before])
+            lines_reordered.append(self.line_indexes_in_screen_order[i_before])
             if self._ref_index_and_curve and i_before == self._ref_index_and_curve[0]:
                 self._ref_index_and_curve[0] = i_after  # keep the reference index correct with this
-        self.lines_in_order = lines_reordered
+        self.line_indexes_in_screen_order = lines_reordered
 
         self.update_line_zorders()
         self.update_figure(recalculate_limits=False)
 
     def update_line_zorders(self):
-        for i, line in enumerate(self.lines_in_order):
+        for i, line in enumerate(self.line_indexes_in_screen_order):
             hide_offset = -1_000_000 if line.get_label()[0] == "_" else 0
-            line.set_zorder(len(self.lines_in_order) - i + hide_offset)
+            line.set_zorder(len(self.line_indexes_in_screen_order) - i + hide_offset)
 
     @qtc.Slot(int)
     def flash_curve(self, i: int):
         if not hasattr(self, "default_lw"):
             self.default_lw = self.ax.get_lines()[0].get_lw()
-        line = self.lines_in_order[i]
+        line = self.line_indexes_in_screen_order[i]
         line.set_lw(self.default_lw*2.5)
         old_alpha = line.get_alpha()
         if old_alpha:
             line.set_alpha(1)
         old_zorder = line.get_zorder()
-        line.set_zorder(len(self.lines_in_order))
+        line.set_zorder(len(self.line_indexes_in_screen_order))
 
 
         self.update_figure(recalculate_limits=False, update_legend=False)
@@ -220,7 +222,7 @@ class MatplotlibWidget(qtw.QWidget):
     @qtc.Slot()
     def hide_show_line2d(self, visibility_states: dict, update_figure=True):
         for i, visible in visibility_states.items():
-            line = self.lines_in_order[i]
+            line = self.line_indexes_in_screen_order[i]
 
             alpha = 1 if visible else 0.1
             line.set_alpha(alpha)
@@ -240,7 +242,7 @@ class MatplotlibWidget(qtw.QWidget):
     def update_labels(self, labels: dict, update_figure=True):
         changed_indexes = []
         for i, label in labels.items():
-            line = self.lines_in_order[i]
+            line = self.line_indexes_in_screen_order[i]
 
             new_label = label if line.get_alpha() in (None, 1) else ("_" + label)
             line.set_label(new_label)
@@ -253,7 +255,7 @@ class MatplotlibWidget(qtw.QWidget):
     def reset_colors(self):
         colors = plt.rcParams["axes.prop_cycle"]()
 
-        for line in self.lines_in_order:
+        for line in self.line_indexes_in_screen_order:
             line.set_color(next(colors)["color"])
 
         self.update_figure(recalculate_limits=False)
