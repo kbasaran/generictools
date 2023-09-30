@@ -105,7 +105,7 @@ class MatplotlibWidget(qtw.QWidget):
         _, = self.ax.semilogx(x_in, y_in, label=label, **line2d_kwargs)
         self._qlistwidget_indexes_of_lines.append(i)
 
-        self._update_line_zorders()
+        self._update_line_zorders()  # noooooooooooooooo. slow................
         if update_figure:
             self.update_figure()
 
@@ -121,7 +121,7 @@ class MatplotlibWidget(qtw.QWidget):
         for index_to_remove in reversed(ix):
             # print(index_to_remove, ix, self._qlistwidget_indexes_of_lines)
             lines_in_user_defined_order[index_to_remove].remove()
-            self._qlistwidget_indexes_of_lines[index_to_remove].pop()
+            self._qlistwidget_indexes_of_lines.pop(index_to_remove)
 
         self._update_line_zorders()
         if update_figure:
@@ -191,24 +191,16 @@ class MatplotlibWidget(qtw.QWidget):
 
         self.ax.legend(handles, labels, title=title)
 
-    @qtc.Slot(dict)
-    def change_lines_order(self, new_index_of_old_index: dict):
-        # each number in the new_index_of_old_index is the index before location change. index in the list is the new location.
-        # first find the indexes of the line2Ds that have a new location in qlistwidget
-        new_qlist_widget_indexes_of_lines = []
-        for line_index, q_list_widget_old_index in enumerate(self._qlistwidget_indexes_of_lines):
-            new_qlist_widget_indexes_of_lines.append(new_index_of_old_index[q_list_widget_old_index])
+    @qtc.Slot(list)
+    def change_lines_order(self, old_indexes: list):
+        # each number in the old_indexes is the index before location change. index in the list is the new location.
+        new_qlist_widget_indexes_of_lines = []  # is an argsort faster than this method???????
+        for new_index, old_index in enumerate(old_indexes):
+            new_qlist_widget_indexes_of_lines.append(self._qlistwidget_indexes_of_lines[old_index])
 
-            if self._ref_index_and_curve and q_list_widget_old_index == self._ref_index_and_curve[0]:
-                self._ref_index_and_curve[0] = new_index_of_old_index[q_list_widget_old_index]  # keep the reference index correct with this
-
-        # lines_reordered = []
-        # line_indexes_in_user_defined_order = self.get_line_indexes_in_user_defined_order()
-        # for i_after, i_before in enumerate(new_positions):
-        #     lines_reordered.append(self._qlistwidget_indexes_of_lines[i_before])
-        #     if self._ref_index_and_curve and i_before == self._ref_index_and_curve[0]:
-        #         self._ref_index_and_curve[0] = i_after  # keep the reference index correct with this
-        # self._qlistwidget_indexes_of_lines = lines_reordered
+            # keep the reference index always correct
+            if self._ref_index_and_curve and old_index == self._ref_index_and_curve[0]:
+                self._ref_index_and_curve[0] = old_indexes[old_index]
 
         self._update_line_zorders()
         self.update_figure(recalculate_limits=False)
