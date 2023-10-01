@@ -261,19 +261,19 @@ class MatplotlibWidget(qtw.QWidget):
     def update_labels(self, labels: dict):
         lines_in_user_defined_order = self.get_lines_in_user_defined_order()
 
-        any_visibles = False
+        any_visible = False
         for i, label in labels.items():
             line = lines_in_user_defined_order[i]
             
             visible = line.get_alpha() in (None, 1)
             if visible:
                 new_label = label
-                any_visibles = True
+                any_visible = True
             else:
                 new_label = "_" + label
             line.set_label(new_label)
 
-        if any_visibles:
+        if any_visible:
             self.update_figure(recalculate_limits=False)
 
         if labels:
