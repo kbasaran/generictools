@@ -23,7 +23,7 @@ logging.basicConfig(level=logging.INFO)
 
 
 class MatplotlibWidget(qtw.QWidget):
-    signal_reference_curve_state = qtc.Signal(bool)
+    signal_is_reference_curve_active = qtc.Signal(bool)
     signal_good_beep = qtc.Signal()
     signal_bad_beep = qtc.Signal()
     available_styles = list(plt.style.available)
@@ -86,12 +86,12 @@ class MatplotlibWidget(qtw.QWidget):
         if update_legend:
             # Update zorders
             n_lines = self._qlistwidget_indexes_of_lines.size
-            for i, line in enumerate(self.get_lines_in_user_defined_order()):
+            for i, line in enumerate(self._get_lines_in_user_defined_order()):
                 hide_offset = -1_000_000 if line.get_label()[0] == "_" else 0
                 line.set_zorder(n_lines - i + hide_offset)
 
             if self.ax.has_data() and self.app_settings.show_legend:
-                self.show_legend_ordered()
+                self._show_legend_ordered()
             else:
                 self.ax.legend().remove()
 
@@ -109,7 +109,7 @@ class MatplotlibWidget(qtw.QWidget):
         x_in, y_in = data
         if self._ref_index_and_curve:
             reference_curve_x, reference_curve_y = self._ref_index_and_curve[1].get_xy()
-            ref_y_intp = self.reference_curve_interpolated(tuple(x_in), tuple(reference_curve_x), tuple(reference_curve_y))
+            ref_y_intp = self._reference_curve_interpolated(tuple(x_in), tuple(reference_curve_x), tuple(reference_curve_y))
             y_in = y_in - ref_y_intp
 
         # Paste the curve into graph
@@ -128,7 +128,7 @@ class MatplotlibWidget(qtw.QWidget):
             else:
                 self._ref_index_and_curve[0] -= sum(i < self._ref_index_and_curve[0] for i in ix)  # summing booleans
 
-        lines_in_user_defined_order = self.get_lines_in_user_defined_order()
+        lines_in_user_defined_order = self._get_lines_in_user_defined_order()
         for index_to_remove in reversed(ix):
             # print(index_to_remove, ix, self._qlistwidget_indexes_of_lines)
             lines_in_user_defined_order[index_to_remove].remove()
@@ -141,7 +141,7 @@ class MatplotlibWidget(qtw.QWidget):
             # self.signal_good_beep.emit()
 
     @lru_cache
-    def reference_curve_interpolated(self, x:tuple, reference_curve_x:tuple, reference_curve_y:tuple):
+    def _reference_curve_interpolated(self, x:tuple, reference_curve_x:tuple, reference_curve_y:tuple):
         return np.interp(np.log(x), np.log(reference_curve_x), reference_curve_y, left=np.nan, right=np.nan)
          
     @qtc.Slot()
@@ -152,7 +152,7 @@ class MatplotlibWidget(qtw.QWidget):
             self._ref_index_and_curve = ref_index_and_curve
             for line2d in self.ax.get_lines():
                 x, y = line2d.get_xdata(), line2d.get_ydata()
-                ref_y_intp = self.reference_curve_interpolated(tuple(x), tuple(reference_curve_x), tuple(reference_curve_y))
+                ref_y_intp = self._reference_curve_interpolated(tuple(x), tuple(reference_curve_x), tuple(reference_curve_y))
                 line2d.set_ydata(y - ref_y_intp)
 
             self.hide_show_line2d({self._ref_index_and_curve[0]: False})
@@ -161,35 +161,35 @@ class MatplotlibWidget(qtw.QWidget):
             reference_curve_x, reference_curve_y = self._ref_index_and_curve[1].get_xy()
             for line2d in self.ax.get_lines():
                 x, y = line2d.get_xdata(), line2d.get_ydata()
-                ref_y_intp = self.reference_curve_interpolated(tuple(x), tuple(reference_curve_x), tuple(reference_curve_y))
+                ref_y_intp = self._reference_curve_interpolated(tuple(x), tuple(reference_curve_x), tuple(reference_curve_y))
                 line2d.set_ydata(y + ref_y_intp)
 
             self.hide_show_line2d({self._ref_index_and_curve[0]: True})
 
             self._ref_index_and_curve = None
 
-        self.signal_reference_curve_state.emit(self._ref_index_and_curve is not None)
+        self.signal_is_reference_curve_active.emit(self._ref_index_and_curve is not None)
         self.update_figure()
 
 
-    def get_line_indexes_in_user_defined_order(self):
+    def _get_line_indexes_in_user_defined_order(self):
         line_indexes_in_qlist_order = np.argsort(self._qlistwidget_indexes_of_lines)
         return line_indexes_in_qlist_order
 
-    def get_lines_in_user_defined_order(self, qlist_index=None):
+    def _get_lines_in_user_defined_order(self, qlist_index=None):
         if qlist_index is None:
-            line_indexes_in_qlist_order = self.get_line_indexes_in_user_defined_order()
+            line_indexes_in_qlist_order = self._get_line_indexes_in_user_defined_order()
             return [self.ax.get_lines()[i] for i in line_indexes_in_qlist_order]
         else:
             graph_index = np.where(self._qlistwidget_indexes_of_lines == qlist_index)[0][0]
             return self.ax.get_lines()[graph_index]
 
-    def get_visible_lines_in_user_defined_order(self):
-        lines_in_user_defined_order = self.get_lines_in_user_defined_order()
+    def _get_visible_lines_in_user_defined_order(self):
+        lines_in_user_defined_order = self._get_lines_in_user_defined_order()
         return [line for line in lines_in_user_defined_order if line.get_alpha() in (None, 1)]
 
-    def show_legend_ordered(self):
-        handles = self.get_visible_lines_in_user_defined_order()
+    def _show_legend_ordered(self):
+        handles = self._get_visible_lines_in_user_defined_order()
         if self.app_settings.max_legend_size > 0:
             handles = handles[:self.app_settings.max_legend_size]
 
@@ -220,7 +220,7 @@ class MatplotlibWidget(qtw.QWidget):
 
     @qtc.Slot(int)
     def flash_curve(self, i: int):
-        line = self.get_lines_in_user_defined_order(i)
+        line = self._get_lines_in_user_defined_order(i)
         begin_lw = line.get_lw()
         line.set_lw(begin_lw * 2.5)
         old_alpha = line.get_alpha()
@@ -242,7 +242,7 @@ class MatplotlibWidget(qtw.QWidget):
 
     @qtc.Slot()
     def hide_show_line2d(self, visibility_states: dict, update_figure=True):
-        lines_in_user_defined_order = self.get_lines_in_user_defined_order()
+        lines_in_user_defined_order = self._get_lines_in_user_defined_order()
         for i, visible in visibility_states.items():
             line = lines_in_user_defined_order[i]
 
@@ -260,7 +260,7 @@ class MatplotlibWidget(qtw.QWidget):
 
     @qtc.Slot(dict)
     def update_labels(self, labels: dict):
-        lines_in_user_defined_order = self.get_lines_in_user_defined_order()
+        lines_in_user_defined_order = self._get_lines_in_user_defined_order()
 
         any_visible = False
         for i, label in labels.items():
@@ -284,7 +284,7 @@ class MatplotlibWidget(qtw.QWidget):
     def reset_colors(self):
         colors = plt.rcParams["axes.prop_cycle"]()
 
-        for line in self.get_lines_in_user_defined_order():
+        for line in self._get_lines_in_user_defined_order():
             line.set_color(next(colors)["color"])
 
         self.update_figure(recalculate_limits=False)
