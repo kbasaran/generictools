@@ -24,6 +24,8 @@ logging.basicConfig(level=logging.INFO)
 
 class MatplotlibWidget(qtw.QWidget):
     signal_reference_curve_state = qtc.Signal(bool)
+    signal_good_beep = qtc.Signal()
+    signal_bad_beep = qtc.Signal()
     available_styles = list(plt.style.available)
 
     def __init__(self, settings):
@@ -255,18 +257,27 @@ class MatplotlibWidget(qtw.QWidget):
         if update_figure:
             self.update_figure(recalculate_limits=False)
 
-    @qtc.Slot()
-    def update_labels(self, labels: dict, update_figure=True):
+    @qtc.Slot(dict)
+    def update_labels(self, labels: dict):
         lines_in_user_defined_order = self.get_lines_in_user_defined_order()
 
+        any_visibles = False
         for i, label in labels.items():
             line = lines_in_user_defined_order[i]
-
-            new_label = label if line.get_alpha() in (None, 1) else ("_" + label)
+            
+            visible = line.get_alpha() in (None, 1)
+            if visible:
+                new_label = label
+                any_visibles = True
+            else:
+                new_label = "_" + label
             line.set_label(new_label)
 
-        if update_figure:
+        if any_visibles:
             self.update_figure(recalculate_limits=False)
+
+        if labels:
+            self.signal_good_beep.emit()
 
     @qtc.Slot()
     def reset_colors(self):
