@@ -283,11 +283,11 @@ class MatplotlibWidget(qtw.QWidget):
     def reset_colors(self):
         colors = plt.rcParams["axes.prop_cycle"]()
 
-        for line in self.ax.get_lines():
+        for line in self.get_lines_in_user_defined_order():
             line.set_color(next(colors)["color"])
 
         self.update_figure(recalculate_limits=False)
-
+        self.signal_good_beep.emit()
 
 if __name__ == "__main__":
 
