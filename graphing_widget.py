@@ -120,8 +120,8 @@ class MatplotlibWidget(qtw.QWidget):
         if update_figure:
             self.update_figure()
 
-    @qtc.Slot()
-    def remove_line2d(self, ix: list, update_figure=True):
+    @qtc.Slot(list)
+    def remove_line2d(self, ix: list):
         if self._ref_index_and_curve:
             if self._ref_index_and_curve[0] in ix:
                 self.toggle_reference_curve(None)
@@ -136,8 +136,9 @@ class MatplotlibWidget(qtw.QWidget):
                 self._qlistwidget_indexes_of_lines[np.nonzero(self._qlistwidget_indexes_of_lines != index_to_remove)]
             self._qlistwidget_indexes_of_lines[self._qlistwidget_indexes_of_lines > index_to_remove] -= 1
 
-        if update_figure:
+        if ix:
             self.update_figure(recalculate_limits=False)
+            # self.signal_good_beep.emit()
 
     @lru_cache
     def reference_curve_interpolated(self, x:tuple, reference_curve_x:tuple, reference_curve_y:tuple):
@@ -276,8 +277,8 @@ class MatplotlibWidget(qtw.QWidget):
         if any_visible:
             self.update_figure(recalculate_limits=False)
 
-        if labels:
-            self.signal_good_beep.emit()
+        # if labels:
+        #     self.signal_good_beep.emit()
 
     @qtc.Slot()
     def reset_colors(self):
@@ -287,7 +288,7 @@ class MatplotlibWidget(qtw.QWidget):
             line.set_color(next(colors)["color"])
 
         self.update_figure(recalculate_limits=False)
-        self.signal_good_beep.emit()
+        # self.signal_good_beep.emit()
 
 if __name__ == "__main__":
 
