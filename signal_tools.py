@@ -494,10 +494,12 @@ class Curve:
 
         elif isinstance(xy, str):
             i_start, i_stop = 0, 0
+            delimiter = "\t" if xy.count("\t") > 1 else ","
             lines = xy.splitlines()
 
+            # Find the starting line for array data
             for i, line in enumerate(lines):
-                parts = line.split("\t")
+                parts = line.split(delimiter)
                 try:
                     parts = [float(part) for part in parts]
                     # print(parts)
@@ -508,8 +510,9 @@ class Curve:
                     # print("failed start " + str(i), str(e))
                     continue
 
+            # Find the last line of array data
             for i, line in enumerate(reversed(lines)):
-                parts = line.split("\t")
+                parts = line.split(delimiter)
                 try:
                     parts = [float(part) for part in parts]
                     assert len(parts) == 2
@@ -520,7 +523,7 @@ class Curve:
                     continue
             # print(i_start, i_stop)
             if i_stop - i_start > 1:
-                parts = [line.split("\t") for line in lines[i_start:i_stop]]
+                parts = [line.split(delimiter) for line in lines[i_start:i_stop]]
                 x = [float(part[0]) for part in parts]
                 y = [float(part[1]) for part in parts]
                 self._check_if_sorted_and_valid(x)
