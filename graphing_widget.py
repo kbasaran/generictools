@@ -145,7 +145,7 @@ class MatplotlibWidget(qtw.QWidget):
         return np.interp(np.log(x), np.log(reference_curve_x), reference_curve_y, left=np.nan, right=np.nan)
          
     @qtc.Slot()
-    def toggle_reference_curve(self, ref_index_and_curve:tuple):
+    def toggle_reference_curve(self, ref_index_and_curve: (tuple, None)):
         if ref_index_and_curve:
             reference_curve_x, reference_curve_y = ref_index_and_curve[1].get_xy()
 
@@ -241,7 +241,7 @@ class MatplotlibWidget(qtw.QWidget):
         self.update_figure(recalculate_limits=False, update_legend=False)
 
     @qtc.Slot()
-    def hide_show_line2d(self, visibility_states: dict, update_figure=True):
+    def hide_show_line2d(self, visibility_states: dict):
         lines_in_user_defined_order = self._get_lines_in_user_defined_order()
         for i, visible in visibility_states.items():
             line = lines_in_user_defined_order[i]
@@ -255,8 +255,7 @@ class MatplotlibWidget(qtw.QWidget):
             if not visible and (label := line.get_label())[0] != "_":
                 line.set_label("_" + label)
 
-        if update_figure:
-            self.update_figure(recalculate_limits=False)
+        self.update_figure(recalculate_limits=False)
 
     @qtc.Slot(dict)
     def update_labels(self, labels: dict):
