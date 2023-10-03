@@ -14,9 +14,6 @@ from matplotlib.figure import Figure
 plt.rcParams["figure.constrained_layout.h_pad"] = 0.3
 plt.rcParams["figure.constrained_layout.w_pad"] = 0.4
 
-import time
-
-
 # https://matplotlib.org/stable/gallery/user_interfaces/embedding_in_qt_sgskip.html
 
 logging.basicConfig(level=logging.INFO)
@@ -86,7 +83,7 @@ class MatplotlibWidget(qtw.QWidget):
         if update_legend:
             # Update zorders
             n_lines = self._qlistwidget_indexes_of_lines.size
-            for i, line in enumerate(self._get_lines_in_user_defined_order()):
+            for i, line in enumerate(self.get_lines_in_user_defined_order()):
                 hide_offset = -1_000_000 if line.get_label()[0] == "_" else 0
                 line.set_zorder(n_lines - i + hide_offset)
 
@@ -96,8 +93,6 @@ class MatplotlibWidget(qtw.QWidget):
                 self.ax.legend().remove()
 
         self.canvas.draw()
-        # for val in self._qlistwidget_indexes_of_lines:
-            # print(val, self.ax.get_lines()[val].get_label())
 
     @qtc.Slot()
     def add_line2d(self, i_insert: int, label: str, data: tuple, update_figure=True, line2d_kwargs={}):
@@ -128,9 +123,8 @@ class MatplotlibWidget(qtw.QWidget):
             else:
                 self._ref_index_and_curve[0] -= sum(i < self._ref_index_and_curve[0] for i in ix)  # summing booleans
 
-        lines_in_user_defined_order = self._get_lines_in_user_defined_order()
+        lines_in_user_defined_order = self.get_lines_in_user_defined_order()
         for index_to_remove in reversed(ix):
-            # print(index_to_remove, ix, self._qlistwidget_indexes_of_lines)
             lines_in_user_defined_order[index_to_remove].remove()
             self._qlistwidget_indexes_of_lines = \
                 self._qlistwidget_indexes_of_lines[np.nonzero(self._qlistwidget_indexes_of_lines != index_to_remove)]
@@ -176,7 +170,7 @@ class MatplotlibWidget(qtw.QWidget):
         line_indexes_in_qlist_order = np.argsort(self._qlistwidget_indexes_of_lines)
         return line_indexes_in_qlist_order
 
-    def _get_lines_in_user_defined_order(self, qlist_index=None):
+    def get_lines_in_user_defined_order(self, qlist_index=None):
         if qlist_index is None:
             line_indexes_in_qlist_order = self._get_line_indexes_in_user_defined_order()
             return [self.ax.get_lines()[i] for i in line_indexes_in_qlist_order]
@@ -185,7 +179,7 @@ class MatplotlibWidget(qtw.QWidget):
             return self.ax.get_lines()[graph_index]
 
     def _get_visible_lines_in_user_defined_order(self):
-        lines_in_user_defined_order = self._get_lines_in_user_defined_order()
+        lines_in_user_defined_order = self.get_lines_in_user_defined_order()
         return [line for line in lines_in_user_defined_order if line.get_alpha() in (None, 1)]
 
     def _show_legend_ordered(self):
@@ -220,7 +214,7 @@ class MatplotlibWidget(qtw.QWidget):
 
     @qtc.Slot(int)
     def flash_curve(self, i: int):
-        line = self._get_lines_in_user_defined_order(i)
+        line = self.get_lines_in_user_defined_order(i)
         begin_lw = line.get_lw()
         line.set_lw(begin_lw * 2.5)
         old_alpha = line.get_alpha()
@@ -242,7 +236,7 @@ class MatplotlibWidget(qtw.QWidget):
 
     @qtc.Slot()
     def hide_show_line2d(self, visibility_states: dict):
-        lines_in_user_defined_order = self._get_lines_in_user_defined_order()
+        lines_in_user_defined_order = self.get_lines_in_user_defined_order()
         for i, visible in visibility_states.items():
             line = lines_in_user_defined_order[i]
 
@@ -259,7 +253,7 @@ class MatplotlibWidget(qtw.QWidget):
 
     @qtc.Slot(dict)
     def update_labels(self, labels: dict):
-        lines_in_user_defined_order = self._get_lines_in_user_defined_order()
+        lines_in_user_defined_order = self.get_lines_in_user_defined_order()
 
         any_visible = False
         for i, label in labels.items():
@@ -283,7 +277,7 @@ class MatplotlibWidget(qtw.QWidget):
     def reset_colors(self):
         colors = plt.rcParams["axes.prop_cycle"]()
 
-        for line in self._get_lines_in_user_defined_order():
+        for line in self.get_lines_in_user_defined_order():
             line.set_color(next(colors)["color"])
 
         self.update_figure(recalculate_limits=False)
