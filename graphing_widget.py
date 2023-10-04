@@ -124,7 +124,7 @@ class MatplotlibWidget(qtw.QWidget):
                 self._ref_index_and_curve[0] -= sum(i < self._ref_index_and_curve[0] for i in ix)  # summing booleans
 
         lines_in_user_defined_order = self.get_lines_in_user_defined_order()
-        for index_to_remove in reversed(ix):
+        for index_to_remove in sorted(ix, reverse=True):
             lines_in_user_defined_order[index_to_remove].remove()
             self._qlistwidget_indexes_of_lines = \
                 self._qlistwidget_indexes_of_lines[np.nonzero(self._qlistwidget_indexes_of_lines != index_to_remove)]
@@ -140,7 +140,8 @@ class MatplotlibWidget(qtw.QWidget):
          
     @qtc.Slot()
     def toggle_reference_curve(self, ref_index_and_curve: (tuple, None)):
-        if ref_index_and_curve:
+        if ref_index_and_curve is not None:
+            # new ref. curve introduced
             reference_curve_x, reference_curve_y = ref_index_and_curve[1].get_xy()
 
             self._ref_index_and_curve = ref_index_and_curve
@@ -151,7 +152,8 @@ class MatplotlibWidget(qtw.QWidget):
 
             self.hide_show_line2d({self._ref_index_and_curve[0]: False})
 
-        else:
+        elif ref_index_and_curve is None and self._ref_index_and_curve is not None:
+            # there was a reference curve active and now it is deactivated.
             reference_curve_x, reference_curve_y = self._ref_index_and_curve[1].get_xy()
             for line2d in self.ax.get_lines():
                 x, y = line2d.get_xdata(), line2d.get_ydata()
@@ -161,10 +163,13 @@ class MatplotlibWidget(qtw.QWidget):
             self.hide_show_line2d({self._ref_index_and_curve[0]: True})
 
             self._ref_index_and_curve = None
+            
+        else:
+            # all other scenarios. no reference should be set.
+            self._ref_index_and_curve = None
 
         self.signal_is_reference_curve_active.emit(self._ref_index_and_curve is not None)
         self.update_figure()
-
 
     def _get_line_indexes_in_user_defined_order(self):
         line_indexes_in_qlist_order = np.argsort(self._qlistwidget_indexes_of_lines)
