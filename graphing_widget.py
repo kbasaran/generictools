@@ -254,7 +254,8 @@ class MatplotlibWidget(qtw.QWidget):
             if not visible and (label := line.get_label())[0] != "_":
                 line.set_label("_" + label)
 
-        self.update_figure(recalculate_limits=False)
+        if visibility_states:
+            self.update_figure(recalculate_limits=False)
 
     @qtc.Slot(dict)
     def update_labels(self, labels: dict):
