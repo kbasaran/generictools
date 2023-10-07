@@ -897,8 +897,8 @@ def iqr_analysis(curves_xy: dict, outlier_fence_iqr):
     outlier_indexes = list(np.array(list(curves_xy.keys()), dtype=int)[outliers_all])
 
     return (
-        Curve((x_array, lower_fence)),
         Curve((x_array, median)),
+        Curve((x_array, lower_fence)),
         Curve((x_array, upper_fence)),
         outlier_indexes
         )
