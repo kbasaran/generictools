@@ -97,7 +97,7 @@ class MatplotlibWidget(qtw.QWidget):
                 self.ax.legend().remove()
 
         self.canvas.draw()
-        logger.info("Graph updated.")
+        logger.info(f"Graph updated with {len(self.ax.get_lines())} lines.")
 
     @qtc.Slot()
     def add_line2d(self, i_insert: int, label: str, data: tuple, update_figure=True, line2d_kwargs={}):
@@ -281,9 +281,6 @@ class MatplotlibWidget(qtw.QWidget):
         if any_visible:
             self.update_figure(recalculate_limits=False)
 
-        # if labels:
-        #     self.signal_good_beep.emit()
-
     @qtc.Slot()
     def reset_colors(self):
         colors = plt.rcParams["axes.prop_cycle"]()
@@ -292,7 +289,7 @@ class MatplotlibWidget(qtw.QWidget):
             line.set_color(next(colors)["color"])
 
         self.update_figure(recalculate_limits=False)
-        # self.signal_good_beep.emit()
+
 
 if __name__ == "__main__":
 
