@@ -1,4 +1,3 @@
-import logging
 import sys
 import numpy as np
 from functools import partial
@@ -16,8 +15,13 @@ plt.rcParams["figure.constrained_layout.w_pad"] = 0.4
 
 # https://matplotlib.org/stable/gallery/user_interfaces/embedding_in_qt_sgskip.html
 
-logging.basicConfig(level=logging.INFO)
 
+import logging
+if __name__ == "__main__":
+    logger = logging.getLogger(__name__)
+else:
+    logging.basicConfig(level=logging.WARNING)
+    logger = logging.getLogger()
 
 class MatplotlibWidget(qtw.QWidget):
     signal_is_reference_curve_active = qtc.Signal(bool)
@@ -93,6 +97,7 @@ class MatplotlibWidget(qtw.QWidget):
                 self.ax.legend().remove()
 
         self.canvas.draw()
+        logger.info("Graph updated.")
 
     @qtc.Slot()
     def add_line2d(self, i_insert: int, label: str, data: tuple, update_figure=True, line2d_kwargs={}):

@@ -2,10 +2,16 @@ import os
 import numpy as np
 import acoustics as ac  # https://github.com/timmahrt/pyAcoustics
 import soundfile as sf
-import logging
 from scipy import interpolate as intp
 from scipy.ndimage import gaussian_filter
 from scipy import signal as sig
+
+import logging
+if __name__ == "__main__":
+    logger = logging.getLogger(__name__)
+else:
+    logging.basicConfig(level=logging.WARNING)
+    logger = logging.getLogger()
 
 
 class TestSignal():
@@ -450,16 +456,16 @@ class Curve:
                                           autostrip=True
                                           )
                     self.klippel_attrs[key] = array
-                    logging.info(f"Array imported with shape: {array.shape}")
+                    logger.info(f"Array imported with shape: {array.shape}")
                 elif key not in self.klippel_attrs.keys():
                     self.klippel_attrs[key] = value
                 else:
-                    logging.error("Key already exists among the parameters somehow...")
+                    logger.error("Key already exists among the parameters somehow...")
 
             except Exception as e:
-                logging.info("Was not able to extract data from string. Error: " + str(e))
-                logging.info("\nString:")
-                logging.info("\n" + attr_mod)
+                logger.info("Was not able to extract data from string. Error: " + str(e))
+                logger.info("\nString:")
+                logger.info("\n" + attr_mod)
 
         # Process the keys
         for key, val in self.klippel_attrs.items():
@@ -638,7 +644,7 @@ def convolve_with_signal(ir, my_sig, ir_FS=None, my_sig_FS=None, trim_zeros=True
     if isinstance(ir, (list, np.ndarray)):
         if ir_FS is None:
             raise ValueError("You need to provide the sampling rate of the input signal array.")
-        logging.info(f"Using a table from {type(ir)} as impulse response input.")
+        logger.info(f"Using a table from {type(ir)} as impulse response input.")
         y1 = np.array(ir)
         y1_FS = ir_FS
 
@@ -647,7 +653,7 @@ def convolve_with_signal(ir, my_sig, ir_FS=None, my_sig_FS=None, trim_zeros=True
         if "Impulse Response".lower() not in ir.SourceDesc.lower():
             raise TypeError("Invalid impulse response data. Please use export tab in settings to export.")
         if not ir.klippel_attrs["SourceDesc"] == "Windowed Impulse Response":
-            logging.warning("Suggested to use 'Windowed Impulse Response'"
+            logger.warning("Suggested to use 'Windowed Impulse Response'"
                             f" instead of current '{ir.SourceDesc}'!"
                             )
         y1 = ir.get_xy[1]
@@ -657,14 +663,14 @@ def convolve_with_signal(ir, my_sig, ir_FS=None, my_sig_FS=None, trim_zeros=True
     if isinstance(my_sig, (list, np.ndarray)):
         if my_sig_FS is None:
             raise ValueError("You need to provide the sampling rate of the input signal array.")
-        logging.info(f"Using a table from {type(ir)} as user signal input.")
+        logger.info(f"Using a table from {type(ir)} as user signal input.")
         y2 = np.array(my_sig)
         y2_FS = my_sig_FS
 
     # Input my_sig is a TestSignal object
     elif isinstance(my_sig, TestSignal):
         if my_sig_FS is not None:
-            logging.warning(f"Ignoring my_sig_FS key argument and using attribute my_sig.FS : {my_sig_FS}")
+            logger.warning(f"Ignoring my_sig_FS key argument and using attribute my_sig.FS : {my_sig_FS}")
         if my_sig.channel_count() > 1:
             raise TypeError("Invalid signal. Signal must have only one channel."
                             f"\nChannels: {my_sig.channel_count()}")
