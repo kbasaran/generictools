@@ -211,6 +211,7 @@ class MatplotlibWidget(qtw.QWidget):
     def change_lines_order(self, new_indexes: dict):
         # new_indexes: each key is the old location of a qlist item. value is the new location
 
+        # Scan the whole list of lines to replace them one by one
         for line_index_in_graph in range(self._qlistwidget_indexes_of_lines.size):
             current_location_in_qlist_widget = self._qlistwidget_indexes_of_lines[line_index_in_graph]            
             new_location_in_qlist_widget = new_indexes[current_location_in_qlist_widget]
