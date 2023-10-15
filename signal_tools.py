@@ -2,11 +2,16 @@ import os
 import numpy as np
 import acoustics as ac  # https://github.com/timmahrt/pyAcoustics
 import soundfile as sf
-import logging
 from scipy import interpolate as intp
 from scipy.ndimage import gaussian_filter
 from scipy import signal as sig
-import time
+
+import logging
+if __name__ == "__main__":
+    logger = logging.getLogger(__name__)
+else:
+    logging.basicConfig(level=logging.WARNING)
+    logger = logging.getLogger()
 
 
 class TestSignal():
@@ -173,20 +178,36 @@ class TestSignal():
     def apply_compression(self, **kwargs):
         """
         Based on AES standard noise generator, Aug. 9, 2007, Keele
+        Only works if input array is normalized to +/-1!!!
         """
         k = 4  # shape factor recommended from the AES tool
+        peak_value = np.max(np.abs(self.time_sig))
         a = kwargs.get("compression")
 
         if a == 0:
             return
+
         elif a > 0:  # expand
-            raise ValueError("Expansion has not implemented yet. "
-                             + "Please only use compression values smaller than 0.")
+        # y = sign(x).*exp((log(-1./(exp(log(abs(x + 1e-20))*k+log(a^k/(a^k+1)))-1))+log(abs(x + 1e-20))*k+log(a^k/(a^k+1)))/k)/a;
+            self.time_sig /= peak_value
+            self.time_sig = np.sign(self.time_sig) * \
+                np.exp(
+                       (
+                           np.log(-1 / (np.exp(np.log(np.abs(self.time_sig + 1e-20)) * k + np.log(a**k/(a**k + 1))) - 1))
+                           + np.log(np.abs(self.time_sig + 1e-20)) * k
+                           + np.log(a**k/(a**k + 1))
+                        )
+                       / k
+                       ) / a
+            self.time_sig *= peak_value
 
         elif a < 0:  # compress
+        # y = sign(x).*(((a*abs(x + 1e-20)).^k./((a*abs(x + 1e-20)).^k + 1)).^(1/k))/((a^k/(a^k + 1))^(1/k));
+            self.time_sig /= peak_value
             self.time_sig = np.sign(self.time_sig) * (
-                ((a * np.abs(self.time_sig + 1e-8))**k
-                 / ((a*abs(self.time_sig + 1e-8))**k + 1))**(1 / k)) / ((a**k / (a**k + 1))**(1 / k))
+                ((a * np.abs(self.time_sig + 1e-20))**k
+                 / ((a * np.abs(self.time_sig + 1e-20))**k + 1))**(1 / k)) / ((a**k / (a**k + 1))**(1 / k))
+            self.time_sig *= peak_value
 
     def make_time_array(self, **kwargs):
         if self.sig_type == "Imported":
@@ -435,16 +456,16 @@ class Curve:
                                           autostrip=True
                                           )
                     self.klippel_attrs[key] = array
-                    logging.info(f"Array imported with shape: {array.shape}")
+                    logger.info(f"Array imported with shape: {array.shape}")
                 elif key not in self.klippel_attrs.keys():
                     self.klippel_attrs[key] = value
                 else:
-                    logging.error("Key already exists among the parameters somehow...")
+                    logger.error("Key already exists among the parameters somehow...")
 
             except Exception as e:
-                logging.info("Was not able to extract data from string. Error: " + str(e))
-                logging.info("\nString:")
-                logging.info("\n" + attr_mod)
+                logger.info("Was not able to extract data from string. Error: " + str(e))
+                logger.info("\nString:")
+                logger.info("\n" + attr_mod)
 
         # Process the keys
         for key, val in self.klippel_attrs.items():
@@ -479,10 +500,12 @@ class Curve:
 
         elif isinstance(xy, str):
             i_start, i_stop = 0, 0
+            delimiter = "\t" if xy.count("\t") > 1 else ","
             lines = xy.splitlines()
 
+            # Find the starting line for array data
             for i, line in enumerate(lines):
-                parts = line.split("\t")
+                parts = line.split(delimiter)
                 try:
                     parts = [float(part) for part in parts]
                     # print(parts)
@@ -493,8 +516,9 @@ class Curve:
                     # print("failed start " + str(i), str(e))
                     continue
 
+            # Find the last line of array data
             for i, line in enumerate(reversed(lines)):
-                parts = line.split("\t")
+                parts = line.split(delimiter)
                 try:
                     parts = [float(part) for part in parts]
                     assert len(parts) == 2
@@ -505,7 +529,7 @@ class Curve:
                     continue
             # print(i_start, i_stop)
             if i_stop - i_start > 1:
-                parts = [line.split("\t") for line in lines[i_start:i_stop]]
+                parts = [line.split(delimiter) for line in lines[i_start:i_stop]]
                 x = [float(part[0]) for part in parts]
                 y = [float(part[1]) for part in parts]
                 self._check_if_sorted_and_valid(x)
@@ -538,6 +562,9 @@ class Curve:
     def set_name_prefix(self, prefix):
         val = prefix if isinstance(prefix, str) else None
         self._identification["prefix"] = val
+
+    def get_name_prefix(self):
+        return self._identification["prefix"]
 
     def clear_name_suffixes(self):
         self._identification["suffixes"].clear()
@@ -586,15 +613,21 @@ class Curve:
         return self._visible
 
 
-def check_if_sorted_and_valid(flat_array):
+def check_if_sorted_and_valid(frequencies):
     # check if array of numbers
-    array = np.array(flat_array, dtype=float)
+    array = np.array(frequencies, dtype=float)
 
     is_sorted = lambda a: np.all(a[:-1] < a[1:])
     if not is_sorted(array):
         raise ValueError("Frequency points are not sorted")
-    if array[0] <= 0:
+    if array is None or array[0] <= 0:
         raise ValueError("Negatives or zeros are not accepted as frequency points.")
+        
+    # ---- validate size
+    if len(frequencies) < 2:
+        raise ValueError("Curve needs to have more than one frequency point."
+                         f"Frequency points: {frequencies}")
+
 
 def discover_fs_from_time_signature(curve):
     if not any(["[ms]" in string for string in curve.klippel_attrs["unresolved_parts"]]):
@@ -611,7 +644,7 @@ def convolve_with_signal(ir, my_sig, ir_FS=None, my_sig_FS=None, trim_zeros=True
     if isinstance(ir, (list, np.ndarray)):
         if ir_FS is None:
             raise ValueError("You need to provide the sampling rate of the input signal array.")
-        logging.info(f"Using a table from {type(ir)} as impulse response input.")
+        logger.info(f"Using a table from {type(ir)} as impulse response input.")
         y1 = np.array(ir)
         y1_FS = ir_FS
 
@@ -620,7 +653,7 @@ def convolve_with_signal(ir, my_sig, ir_FS=None, my_sig_FS=None, trim_zeros=True
         if "Impulse Response".lower() not in ir.SourceDesc.lower():
             raise TypeError("Invalid impulse response data. Please use export tab in settings to export.")
         if not ir.klippel_attrs["SourceDesc"] == "Windowed Impulse Response":
-            logging.warning("Suggested to use 'Windowed Impulse Response'"
+            logger.warning("Suggested to use 'Windowed Impulse Response'"
                             f" instead of current '{ir.SourceDesc}'!"
                             )
         y1 = ir.get_xy[1]
@@ -630,14 +663,14 @@ def convolve_with_signal(ir, my_sig, ir_FS=None, my_sig_FS=None, trim_zeros=True
     if isinstance(my_sig, (list, np.ndarray)):
         if my_sig_FS is None:
             raise ValueError("You need to provide the sampling rate of the input signal array.")
-        logging.info(f"Using a table from {type(ir)} as user signal input.")
+        logger.info(f"Using a table from {type(ir)} as user signal input.")
         y2 = np.array(my_sig)
         y2_FS = my_sig_FS
 
     # Input my_sig is a TestSignal object
     elif isinstance(my_sig, TestSignal):
         if my_sig_FS is not None:
-            logging.warning(f"Ignoring my_sig_FS key argument and using attribute my_sig.FS : {my_sig_FS}")
+            logger.warning(f"Ignoring my_sig_FS key argument and using attribute my_sig.FS : {my_sig_FS}")
         if my_sig.channel_count() > 1:
             raise TypeError("Invalid signal. Signal must have only one channel."
                             f"\nChannels: {my_sig.channel_count()}")
@@ -860,8 +893,8 @@ def iqr_analysis(curves_xy: dict, outlier_fence_iqr):
 
     q1, median, q3 = np.percentile(y_arrays, (25, 50, 75), axis=1, method='median_unbiased')
     iqr = q3 - q1
-    lower_fence = median - iqr * outlier_fence_iqr
-    upper_fence = median + iqr * outlier_fence_iqr
+    lower_fence = q1 - iqr * outlier_fence_iqr
+    upper_fence = q3 + iqr * outlier_fence_iqr
 
     outlier_down = np.any(y_arrays < lower_fence.reshape((-1, 1)), axis=0)
     outlier_up = np.any(y_arrays > upper_fence.reshape((-1, 1)), axis=0)
@@ -870,8 +903,8 @@ def iqr_analysis(curves_xy: dict, outlier_fence_iqr):
     outlier_indexes = list(np.array(list(curves_xy.keys()), dtype=int)[outliers_all])
 
     return (
-        Curve((x_array, lower_fence)),
         Curve((x_array, median)),
+        Curve((x_array, lower_fence)),
         Curve((x_array, upper_fence)),
         outlier_indexes
         )
