@@ -194,8 +194,8 @@ class SubForm(qtw.QWidget):
         
 
 class UserForm(qtw.QWidget):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None):
+        super().__init__(parent=parent)
         self._layout = qtw.QFormLayout(self)  # the argument makes already here the "setLayout" for the widget
         self._create_core_objects()
 
