@@ -136,7 +136,7 @@ class MatplotlibWidget(qtw.QWidget):
             self._qlistwidget_indexes_of_lines[self._qlistwidget_indexes_of_lines > index_to_remove] -= 1
 
         if ix:
-            self.update_figure(recalculate_limits=False)
+            self.update_figure()
             # self.signal_good_beep.emit()
 
     @lru_cache
