@@ -218,7 +218,8 @@ class UserForm(qtw.QWidget):
 
     def update_form_values(self, values_new: dict):
         no_dict_key_for_widget = set(
-            [key for key in self._user_input_widgets.keys() if "_button" not in key])  # works???????????????????????
+            [key for key, obj in self._user_input_widgets.items() if not isinstance(obj, qtw.QAbstractButton)]
+            )  # works???????????????????????
         no_widget_for_dict_key = set()
         for key, value_new in values_new.items():
             try:
@@ -263,10 +264,13 @@ class UserForm(qtw.QWidget):
                              )
 
     def get_form_values(self) -> dict:
+        """Collects all values from the widgets in the form that have user input values.
+        Puts them in a dictionary and returns.
+        """
         values = {}
         for key, obj in self._user_input_widgets.items():
 
-            if "_button" in key:
+            if isinstance(obj, qtw.QAbstractButton):
                 continue
 
             if isinstance(obj, qtw.QComboBox):
