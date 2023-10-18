@@ -340,6 +340,38 @@ class SoundEngine(qtc.QObject):
     def release_all(self):
         self.stream.stop(ignore_errors=True)
 
+class ResultTextBox(qtw.QDialog):
+    def __init__(self, title, result_text, monospace=True, parent=None):
+        super().__init__(parent=parent)
+        # self.setWindowModality(qtc.Qt.WindowModality.NonModal)
+
+        layout = qtw.QVBoxLayout(self)
+        self.setWindowTitle(title)
+        self.setMinimumSize(700, 480)
+        text_box = qtw.QTextEdit()
+        text_box.setReadOnly(True)
+        text_box.setText(result_text)
+
+        if monospace:
+            family = "Monospace" if "Monospace" in qtg.QFontDatabase.families() else "Consolas"
+            font = text_box.font()
+            font.setFamily(family)
+            text_box.setFont(font)
+
+        layout.addWidget(text_box)
+
+        # ---- Buttons
+        button_group = PushButtonGroup({"ok": "OK",
+                                            },
+                                           {},
+                                           )
+        button_group.buttons()["ok_pushbutton"].setDefault(True)
+        layout.addWidget(button_group)
+
+        # ---- Connections
+        button_group.buttons()["ok_pushbutton"].clicked.connect(
+            self.accept)
+
 class ErrorHandlerDeveloper:
     def __init__(self, app):
         self.app = app
