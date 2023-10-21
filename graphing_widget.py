@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 plt.rcParams["figure.constrained_layout.h_pad"] = 0.3
 plt.rcParams["figure.constrained_layout.w_pad"] = 0.4
+import time
 
 # https://matplotlib.org/stable/gallery/user_interfaces/embedding_in_qt_sgskip.html
 
@@ -78,6 +79,7 @@ class MatplotlibWidget(qtw.QWidget):
 
     @qtc.Slot()
     def update_figure(self, recalculate_limits=True, update_legend=True):
+        start_time = time.perf_counter()
         
         if recalculate_limits:
             y_arrays = [line.get_ydata() for line in self.ax.get_lines()]
@@ -97,7 +99,7 @@ class MatplotlibWidget(qtw.QWidget):
                 self.ax.legend().remove()
 
         self.canvas.draw()
-        logger.info(f"Graph updated. {len(self.ax.get_lines())} lines.")
+        logger.info(f"Graph updated. {len(self.ax.get_lines())} lines. Took {(time.perf_counter()-start_time)*1000:.4g}ms.")
 
     @qtc.Slot()
     def add_line2d(self, i_insert: int, label: str, data: tuple, update_figure=True, line2d_kwargs={}):
