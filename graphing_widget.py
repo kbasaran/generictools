@@ -97,7 +97,7 @@ class MatplotlibWidget(qtw.QWidget):
                 self.ax.legend().remove()
 
         self.canvas.draw()
-        logger.info(f"Graph updated with {len(self.ax.get_lines())} lines.")
+        logger.info(f"Graph updated. {len(self.ax.get_lines())} lines.")
 
     @qtc.Slot()
     def add_line2d(self, i_insert: int, label: str, data: tuple, update_figure=True, line2d_kwargs={}):
