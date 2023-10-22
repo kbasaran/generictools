@@ -80,11 +80,6 @@ class MatplotlibWidget(qtw.QWidget):
     @qtc.Slot()
     def update_figure(self, recalculate_limits=True, update_legend=True):
         start_time = time.perf_counter()
-        
-        if recalculate_limits:
-            y_arrays = [line.get_ydata() for line in self.ax.get_lines()]
-            y_min_max = signal_tools.calculate_graph_limits(y_arrays, multiple=5, clearance_up_down=(2, 1))
-            self.ax.set_ylim(y_min_max)
 
         if update_legend:
             # Update zorders
@@ -94,11 +89,17 @@ class MatplotlibWidget(qtw.QWidget):
                 line.set_zorder(n_lines - i + hide_offset)
 
             if self.ax.has_data() and self.app_settings.show_legend:
-                self._show_legend_ordered()
+                legend = self._create_ordered_legend()
+                self.ax.draw_artist(legend)
             else:
                 self.ax.legend().remove()
 
-        self.canvas.draw()
+        if recalculate_limits:
+            y_arrays = [line.get_ydata() for line in self.ax.get_lines()]
+            y_min_max = signal_tools.calculate_graph_limits(y_arrays, multiple=5, clearance_up_down=(2, 1))
+            self.ax.set_ylim(y_min_max)
+
+        self.canvas.draw_idle()
         logger.info(f"Graph updated. {len(self.ax.get_lines())} lines. Took {(time.perf_counter()-start_time)*1000:.4g}ms.")
 
     @qtc.Slot()
@@ -123,7 +124,7 @@ class MatplotlibWidget(qtw.QWidget):
             self.update_figure()
 
     @qtc.Slot(list)
-    def remove_line2d(self, ix: list):
+    def remove_multiple_line2d(self, ix: list):
         if self._ref_index_and_curve:
             if self._ref_index_and_curve[0] in ix:
                 self.toggle_reference_curve(None)
@@ -139,7 +140,6 @@ class MatplotlibWidget(qtw.QWidget):
 
         if ix:
             self.update_figure()
-            # self.signal_good_beep.emit()
 
     @lru_cache
     def _reference_curve_interpolated(self, x:tuple, reference_curve_x:tuple, reference_curve_y:tuple):
@@ -194,7 +194,7 @@ class MatplotlibWidget(qtw.QWidget):
         lines_in_user_defined_order = self.get_lines_in_user_defined_order()
         return [line for line in lines_in_user_defined_order if line.get_alpha() in (None, 1)]
 
-    def _show_legend_ordered(self):
+    def _create_ordered_legend(self):
         handles = self._get_visible_lines_in_user_defined_order()
         if self.app_settings.max_legend_size > 0:
             handles = handles[:self.app_settings.max_legend_size]
@@ -207,7 +207,9 @@ class MatplotlibWidget(qtw.QWidget):
         else:
             title = None
 
-        self.ax.legend(handles, labels, title=title)
+        return self.ax.legend(handles, labels, title=title)
+        
+        
 
     @qtc.Slot(dict)
     def change_lines_order(self, new_indexes: dict):
@@ -235,8 +237,9 @@ class MatplotlibWidget(qtw.QWidget):
             line.set_alpha(1)
         old_zorder = line.get_zorder()
         line.set_zorder(len(self.ax.get_lines()))
-
-        self.update_figure(recalculate_limits=False, update_legend=False)
+        
+        self.ax.draw_artist(line)
+        self.canvas.draw_idle()
 
         timer = qtc.QTimer()
         timer.singleShot(1000, partial(self._stop_flash, line, (old_alpha, begin_lw, old_zorder)))
@@ -245,7 +248,9 @@ class MatplotlibWidget(qtw.QWidget):
         line.set_alpha(old_states[0])
         line.set_lw(old_states[1])
         line.set_zorder(old_states[2])
-        self.update_figure(recalculate_limits=False, update_legend=False)
+
+        self.ax.draw_artist(line)
+        self.canvas.draw_idle()
 
     @qtc.Slot()
     def hide_show_line2d(self, visibility_states: dict):
@@ -261,9 +266,11 @@ class MatplotlibWidget(qtw.QWidget):
                     line.set_label(label.removeprefix("_"))
             if not visible and (label := line.get_label())[0] != "_":
                 line.set_label("_" + label)
+            
+            self.ax.draw_artist(line)
 
         if visibility_states:
-            self.update_figure(recalculate_limits=False)
+            self.canvas.draw_idle()
 
     @qtc.Slot(dict)
     def update_labels(self, labels: dict):
@@ -282,7 +289,7 @@ class MatplotlibWidget(qtw.QWidget):
             line.set_label(new_label)
 
         if any_visible:
-            self.update_figure(recalculate_limits=False)
+            self.update_figure(recalculate_limits=False, update_legend=True)
 
     @qtc.Slot()
     def reset_colors(self):
@@ -291,7 +298,7 @@ class MatplotlibWidget(qtw.QWidget):
         for line in self.get_lines_in_user_defined_order():
             line.set_color(next(colors)["color"])
 
-        self.update_figure(recalculate_limits=False)
+        self.canvas.draw_idle()
 
 
 if __name__ == "__main__":
