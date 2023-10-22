@@ -144,6 +144,7 @@ class PushButtonGroup(qtw.QWidget):
     def buttons(self) -> dict:
         return self._buttons
 
+
 class ChoiceButtonGroup(qtw.QWidget):
     def __init__(self, group_name, names: dict, tooltips: dict, vertical=False, user_data_widgets=None):
         """keys for names: integers
@@ -169,6 +170,7 @@ class ChoiceButtonGroup(qtw.QWidget):
     def buttons(self) -> list:
         return self.self.button_group.buttons()
 
+
 class ComboBox(qtw.QComboBox):
     def __init__(self, name,
                  tooltip,
@@ -179,7 +181,7 @@ class ComboBox(qtw.QComboBox):
         if tooltip:
             self.setToolTip(tooltip)
         for item in items:
-            self.addItem(*item)  # tuple with userData, therefore *
+            self.addItem(*item)  # tuple (text, userData), therefore *
         if user_data_widgets is not None:
             self.user_values_storage(user_data_widgets)
 
