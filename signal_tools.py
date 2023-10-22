@@ -5,6 +5,8 @@ import soundfile as sf
 from scipy import interpolate as intp
 from scipy.ndimage import gaussian_filter
 from scipy import signal as sig
+from functools import lru_cache
+
 
 import logging
 if __name__ == "__main__":
@@ -480,12 +482,12 @@ class Curve:
     def set_xy(self, xy):
         if isinstance(xy, np.ndarray):
             if xy.shape[0] == 2:
-                self._check_if_sorted_and_valid(xy[0, :])
+                self._check_if_sorted_and_valid(tuple(xy[0, :]))
                 setattr(self, "_x", xy[0, :])
                 setattr(self, "_y", xy[1, :])
                 setattr(self, "_xy", xy)
             elif xy.shape[1] == 2:
-                self._check_if_sorted_and_valid(xy[:, 0])
+                self._check_if_sorted_and_valid(tuple(xy[:, 0]))
                 setattr(self, "_x", xy[:, 0])
                 setattr(self, "_y", xy[:, 1])
                 setattr(self, "_xy", np.transpose(xy))
@@ -493,7 +495,7 @@ class Curve:
                 raise ValueError("xy is not an array with two columns or 2 rows")
 
         elif isinstance(xy, tuple) and len(xy[0]) == len(xy[1]):
-            self._check_if_sorted_and_valid(np.array(xy[0]))
+            self._check_if_sorted_and_valid(tuple(xy[0]))
             setattr(self, "_x", np.array(xy[0]))
             setattr(self, "_y", np.array(xy[1]))
             setattr(self, "_xy", np.row_stack([self._x, self._y]))
@@ -530,8 +532,8 @@ class Curve:
             # print(i_start, i_stop)
             if i_stop - i_start > 1:
                 parts = [line.split(delimiter) for line in lines[i_start:i_stop]]
-                x = [float(part[0]) for part in parts]
-                y = [float(part[1]) for part in parts]
+                x = (float(part[0]) for part in parts)
+                y = (float(part[1]) for part in parts)
                 self._check_if_sorted_and_valid(x)
                 setattr(self, "_x", np.array(x))
                 setattr(self, "_y", np.array(y))
@@ -613,21 +615,21 @@ class Curve:
         return self._visible
 
 
-def check_if_sorted_and_valid(frequencies):
-    # check if array of numbers
+@lru_cache
+def check_if_sorted_and_valid(frequencies: tuple):
     array = np.array(frequencies, dtype=float)
+
+    # ---- validate size
+    if array.size < 2:
+        raise ValueError("Curve needs to have more than one frequency point."
+                         f"Frequency points: {frequencies}")
 
     is_sorted = lambda a: np.all(a[:-1] < a[1:])
     if not is_sorted(array):
         raise ValueError("Frequency points are not sorted")
-    if array is None or array[0] <= 0:
+    if array[0] <= 0:
         raise ValueError("Negatives or zeros are not accepted as frequency points.")
         
-    # ---- validate size
-    if len(frequencies) < 2:
-        raise ValueError("Curve needs to have more than one frequency point."
-                         f"Frequency points: {frequencies}")
-
 
 def discover_fs_from_time_signature(curve):
     if not any(["[ms]" in string for string in curve.klippel_attrs["unresolved_parts"]]):
