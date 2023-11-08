@@ -500,13 +500,13 @@ class Curve:
             setattr(self, "_y", np.array(xy[1]))
             setattr(self, "_xy", np.row_stack([self._x, self._y]))
 
-        elif isinstance(xy, str):
+        elif isinstance(xy, str):  # only works with frequencies in index (shape=(*, 2))
             i_start, i_stop = 0, 0
             delimiter = "\t" if xy.count("\t") > 1 else ","
             lines = xy.splitlines()
 
             # Find the starting line for array data
-            for i, line in enumerate(lines):
+            for i, line in enumerate(lines):  # this is mega slow
                 parts = line.split(delimiter)
                 try:
                     parts = [float(part) for part in parts]
@@ -519,7 +519,7 @@ class Curve:
                     continue
 
             # Find the last line of array data
-            for i, line in enumerate(reversed(lines)):
+            for i, line in enumerate(reversed(lines)):  # this is mega slow
                 parts = line.split(delimiter)
                 try:
                     parts = [float(part) for part in parts]
@@ -532,8 +532,8 @@ class Curve:
             # print(i_start, i_stop)
             if i_stop - i_start > 1:
                 parts = [line.split(delimiter) for line in lines[i_start:i_stop]]
-                x = (float(part[0]) for part in parts)
-                y = (float(part[1]) for part in parts)
+                x = tuple(float(part[0]) for part in parts)
+                y = [float(part[1]) for part in parts]
                 self._check_if_sorted_and_valid(x)
                 setattr(self, "_x", np.array(x))
                 setattr(self, "_y", np.array(y))
