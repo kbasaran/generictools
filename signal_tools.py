@@ -169,7 +169,7 @@ class TestSignal():
                           + f"\nMean: {self.mean:.5g}"
                           + f"\nSample rate: {self.FS} Hz"
                           + f"\nDuration: {self.T:.2f} seconds"
-                          + f"\nCurrent channel count: {self.channel_count()}"
+                          + f"\nChannel count: {self.channel_count()}"
                           )
 
         if self.applied_fade_in_duration:
