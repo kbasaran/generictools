@@ -299,7 +299,7 @@ class UserForm(qtw.QWidget):
 
         logger.debug("Return of 'get_form_values")
         for val, key in values.items():
-            logger.debug(val, type(val), key, type(key))
+            logger.debug((val, type(val), key, type(key)))
 
         return values
 

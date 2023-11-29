@@ -621,14 +621,16 @@ def check_if_sorted_and_valid(frequencies: tuple):
 
     # ---- validate size
     if array.size < 2:
-        raise ValueError("Curve needs to have more than one frequency point."
-                         f"Frequency points: {frequencies}")
+        raise ValueError(("Curve needs to have more than one frequency point."
+                         f"Frequency points: {frequencies}"))
 
     is_sorted = lambda a: np.all(a[:-1] < a[1:])
     if not is_sorted(array):
-        raise ValueError("Frequency points are not sorted")
+        raise ValueError(f"Frequency points are not sorted: {array}")
     if array[0] <= 0:
-        raise ValueError("Negatives or zeros are not accepted as frequency points.")
+        raise ValueError(f"Negatives or zeros are not accepted as frequency points: '{array[0]}' found at start of array.")
+    
+    logger.info("Array verified as sorted and valid.")
         
 
 def discover_fs_from_time_signature(curve):
