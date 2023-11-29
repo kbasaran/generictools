@@ -193,16 +193,15 @@ class SubForm(qtw.QWidget):
     def __init__(self):
         super().__init__()
         self._layout = qtw.QFormLayout(self)
-        
+
 
 class UserForm(qtw.QWidget):
     def __init__(self, parent=None):
         super().__init__(parent=parent)
         self._layout = qtw.QFormLayout(self)  # the argument makes already here the "setLayout" for the widget
-        self._create_core_objects()
-
-    def _create_core_objects(self):
-        self._user_input_widgets = dict()
+        self._user_input_widgets = dict()  # this is a dict of objects that user give input in, such as a 
+        # textbox or a checkmark. key is the name of the parameter. value is the widget itself.
+        # buttons are also in here although they do not store a value.
 
     def add_row(self, obj, description=None, into_form=None):
         if into_form:
@@ -219,6 +218,7 @@ class UserForm(qtw.QWidget):
             obj.user_values_storage(self._user_input_widgets)
 
     def update_form_values(self, values_new: dict):
+        # list to store widgets that did not receive a new value with "values_new"
         no_dict_key_for_widget = set(
             [key for key, obj in self._user_input_widgets.items() if not isinstance(obj, qtw.QAbstractButton)]
             )  # works???????????????????????
