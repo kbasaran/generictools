@@ -270,7 +270,7 @@ class MatplotlibWidget(qtw.QWidget):
             self.ax.draw_artist(line)
 
         if visibility_states:
-            self.canvas.draw_idle()
+            self.update_figure(recalculate_limits=False)
 
     @qtc.Slot(dict)
     def update_labels(self, labels: dict):
@@ -298,7 +298,7 @@ class MatplotlibWidget(qtw.QWidget):
         for line in self.get_lines_in_user_defined_order():
             line.set_color(next(colors)["color"])
 
-        self.canvas.draw_idle()
+        self.update_figure(recalculate_limits=False)
 
 
 if __name__ == "__main__":
