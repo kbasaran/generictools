@@ -16,7 +16,6 @@ __email__ = "kbasaran@gmail.com"
 # You should have received a copy of the GNU General Public
 # License along with Linecraft. If not, see <https://www.gnu.org/licenses/>
 
-import os
 import traceback
 
 from PySide6 import QtWidgets as qtw
@@ -41,7 +40,6 @@ class FloatSpinBox(qtw.QDoubleSpinBox):
                  decimals=2,
                  min_max=(0.01, 999.99),
                  ratio_to_SI=1,
-                 user_data_widgets=None,
                  ):
         self._name = name
         super().__init__()
@@ -51,10 +49,8 @@ class FloatSpinBox(qtw.QDoubleSpinBox):
         self.setDecimals(decimals)
         if min_max:
             self.setRange(*min_max)
-        if user_data_widgets is not None:
-            self.user_values_storage(user_data_widgets)
 
-    def user_values_storage(self, user_data_widgets: dict):
+    def add_elements_to_dict(self, user_data_widgets: dict):
         user_data_widgets[self._name] = self
 
 
@@ -62,7 +58,6 @@ class IntSpinBox(qtw.QSpinBox):
     def __init__(self, name, tooltip,
                  min_max=(0, 999999),
                  ratio_to_SI=1,
-                 user_data_widgets=None
                  ):
         self._name = name
         super().__init__()
@@ -70,36 +65,29 @@ class IntSpinBox(qtw.QSpinBox):
             self.setToolTip(tooltip)
         if min_max:
             self.setRange(*min_max)
-        if user_data_widgets is not None:
-            self.user_values_storage(user_data_widgets)
 
-    def user_values_storage(self, user_data_widgets: dict):
+    def add_elements_to_dict(self, user_data_widgets: dict):
         user_data_widgets[self._name] = self
 
 class CheckBox(qtw.QCheckBox):
     def __init__(self, name, tooltip,
-                 user_data_widgets=None
                  ):
         self._name = name
         super().__init__()
         if tooltip:
             self.setToolTip(tooltip)
-        if user_data_widgets is not None:
-            self.user_values_storage(user_data_widgets)
 
-    def user_values_storage(self, user_data_widgets: dict):
+    def add_elements_to_dict(self, user_data_widgets: dict):
         user_data_widgets[self._name] = self
 
 class LineTextBox(qtw.QLineEdit):
-    def __init__(self, name, tooltip, user_data_widgets=None):
+    def __init__(self, name, tooltip):
         self._name = name
         super().__init__()
         if tooltip:
             self.setToolTip(tooltip)
-        if user_data_widgets is not None:
-            self.user_values_storage(user_data_widgets)
 
-    def user_values_storage(self, user_data_widgets: dict):
+    def add_elements_to_dict(self, user_data_widgets: dict):
         user_data_widgets[self._name] = self
 
 
@@ -120,7 +108,7 @@ class Title(qtw.QLabel):
 
 
 class PushButtonGroup(qtw.QWidget):
-    def __init__(self, names: dict, tooltips: dict, vertical=False, user_data_widgets=None):
+    def __init__(self, names: dict, tooltips: dict, vertical=False):
         """Both names and tooltips have the same keys: short_name's
         Values for names: text
         """
@@ -134,10 +122,8 @@ class PushButtonGroup(qtw.QWidget):
                 button.setToolTip(tooltips[key])
             layout.addWidget(button)
             self._buttons[name] = button
-        if user_data_widgets is not None:
-            self.user_values_storage(user_data_widgets)
 
-    def user_values_storage(self, user_data_widgets: dict):
+    def add_elements_to_dict(self, user_data_widgets: dict):
         for name, button in self._buttons.items():
             user_data_widgets[name] = button
 
@@ -146,7 +132,7 @@ class PushButtonGroup(qtw.QWidget):
 
 
 class ChoiceButtonGroup(qtw.QWidget):
-    def __init__(self, group_name, names: dict, tooltips: dict, vertical=False, user_data_widgets=None):
+    def __init__(self, group_name, names: dict, tooltips: dict, vertical=False):
         """keys for names: integers
         values for names: text
         """
@@ -161,10 +147,8 @@ class ChoiceButtonGroup(qtw.QWidget):
             self.button_group.addButton(button, key)
             layout.addWidget(button)
         self.button_group.buttons()[0].setChecked(True)
-        if user_data_widgets is not None:
-            self.user_values_storage(user_data_widgets)
 
-    def user_values_storage(self, user_data_widgets: dict):
+    def add_elements_to_dict(self, user_data_widgets: dict):
         user_data_widgets[self._name] = self.button_group
 
     def buttons(self) -> list:
@@ -175,17 +159,15 @@ class ComboBox(qtw.QComboBox):
     def __init__(self, name,
                  tooltip,
                  items: list,
-                 user_data_widgets=None):
+                 ):
         self._name = name
         super().__init__()
         if tooltip:
             self.setToolTip(tooltip)
         for item in items:
             self.addItem(*item)  # tuple (text, userData), therefore *
-        if user_data_widgets is not None:
-            self.user_values_storage(user_data_widgets)
 
-    def user_values_storage(self, user_data_widgets: dict):
+    def add_elements_to_dict(self, user_data_widgets: dict):
         user_data_widgets[self._name] = self
 
 
@@ -199,7 +181,7 @@ class UserForm(qtw.QWidget):
     def __init__(self, parent=None):
         super().__init__(parent=parent)
         self._layout = qtw.QFormLayout(self)  # the argument makes already here the "setLayout" for the widget
-        self._user_input_widgets = dict()  # this is a dict of objects that user give input in, such as a 
+        self._interactable_widgets = dict()  # this is a dict of objects that user give input in, such as a 
         # textbox or a checkmark. key is the name of the parameter. value is the widget itself.
         # buttons are also in here although they do not store a value.
 
@@ -214,21 +196,22 @@ class UserForm(qtw.QWidget):
         else:
             layout.addRow(obj)
 
-        if hasattr(obj, "user_values_storage"):
-            obj.user_values_storage(self._user_input_widgets)
+        if hasattr(obj, "add_elements_to_dict"):
+            obj.add_elements_to_dict(self._interactable_widgets)
 
-    def update_form_values(self, values_new: dict):
-        # list to store widgets that did not receive a new value with "values_new"
-        no_dict_key_for_widget = set(
-            [key for key, obj in self._user_input_widgets.items() if not isinstance(obj, qtw.QAbstractButton)]
-            )  # works???????????????????????
-        no_widget_for_dict_key = set()
+    def update_form_values(self, values_new: dict) -> None:
+        # make a set to store widgets that did not receive a new value with "values_new"
+        no_new_value_for_widget = set(
+            [key for key, obj in self._interactable_widgets.items() if not isinstance(obj, qtw.QAbstractButton)]
+            )
+        no_widget_for_new_value = set()
+
         for key, value_new in values_new.items():
             try:
-                obj = self._user_input_widgets[key]
+                obj = self._interactable_widgets[key]
 
                 if isinstance(obj, qtw.QComboBox):
-                    assert isinstance(value_new, dict)
+                    # assert isinstance(value_new, dict)
                     if "items" in value_new.keys():
                         obj.clear()
                         # assert all([key in value_new.keys() for key in ["items", "current_index"]])
@@ -237,7 +220,7 @@ class UserForm(qtw.QWidget):
                     obj.setCurrentIndex(value_new["current_index"])
 
                 elif isinstance(obj, qtw.QLineEdit):
-                    assert isinstance(value_new, str)
+                    # assert isinstance(value_new, str)
                     obj.setText(value_new)
 
                 elif isinstance(obj, qtw.QPushButton):
@@ -251,31 +234,35 @@ class UserForm(qtw.QWidget):
                     obj.setChecked(value_new)
 
                 else:
-                    assert type(value_new) == type(obj.value())
+                    # assert type(value_new) == type(obj.value())
                     obj.setValue(value_new)
 
-                # finally
-                no_dict_key_for_widget.discard(key)
+                # the widget was updated successfully
+                no_new_value_for_widget.discard(key)
 
             except KeyError:
-                no_widget_for_dict_key.update((key,))
+                no_widget_for_new_value.update((key,))
 
-        if no_widget_for_dict_key | no_dict_key_for_widget:
-            raise ValueError(f"No widget(s) found for the keys: '{no_widget_for_dict_key}'\n"
-                             f"No data found to update the widget(s): '{no_dict_key_for_widget}'"
-                             )
+        not_found_text = ""
+        if no_widget_for_new_value:
+            not_found_text += f"No widget(s) found for the keys: '{no_widget_for_new_value}'. "
+        if no_new_value_for_widget:
+            not_found_text += f"No data found to update the widget(s): '{no_new_value_for_widget}'."
+
+        if not_found_text:
+            raise ValueError(not_found_text)
 
     def get_form_values(self) -> dict:
         """Collects all values from the widgets in the form that have user input values.
         Puts them in a dictionary and returns.
         """
         values = {}
-        for key, obj in self._user_input_widgets.items():
+        for key, obj in self._interactable_widgets.items():
 
             if isinstance(obj, qtw.QAbstractButton):
                 continue
 
-            if isinstance(obj, qtw.QComboBox):
+            elif isinstance(obj, qtw.QComboBox):
                 obj_value = {"items": [], "current_index": 0}
                 for i_item in range(obj.count()):
                     item_text = obj.itemText(i_item)
@@ -297,7 +284,7 @@ class UserForm(qtw.QWidget):
 
             values[key] = obj_value
 
-        logger.debug("Return of 'get_form_values")
+        logger.debug("Return of 'get_form_values':")
         for val, key in values.items():
             logger.debug((val, type(val), key, type(key)))
 
