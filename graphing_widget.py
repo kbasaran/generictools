@@ -1,4 +1,5 @@
 import sys
+import time
 import numpy as np
 from functools import partial
 from generictools import signal_tools
@@ -12,10 +13,7 @@ import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 plt.rcParams["figure.constrained_layout.h_pad"] = 0.3
 plt.rcParams["figure.constrained_layout.w_pad"] = 0.4
-import time
-
 # https://matplotlib.org/stable/gallery/user_interfaces/embedding_in_qt_sgskip.html
-
 
 import logging
 if __name__ == "__main__":
@@ -23,6 +21,7 @@ if __name__ == "__main__":
 else:
     logging.basicConfig(level=logging.WARNING)
     logger = logging.getLogger()
+
 
 class MatplotlibWidget(qtw.QWidget):
     signal_is_reference_curve_active = qtc.Signal(bool)
@@ -100,7 +99,8 @@ class MatplotlibWidget(qtw.QWidget):
             self.ax.set_ylim(y_min_max)
 
         self.canvas.draw_idle()
-        logger.info(f"Graph updated. {len(self.ax.get_lines())} lines. Took {(time.perf_counter()-start_time)*1000:.4g}ms.")
+        logger.info(f"Graph updated. {len(self.ax.get_lines())} lines.",
+                    f"\nTook {(time.perf_counter()-start_time)*1000:.4g}ms.")
 
     @qtc.Slot()
     def add_line2d(self, i_insert: int, label: str, data: tuple, update_figure=True, line2d_kwargs={}):
@@ -112,7 +112,10 @@ class MatplotlibWidget(qtw.QWidget):
         x_in, y_in = data
         if self._ref_index_and_curve:
             reference_curve_x, reference_curve_y = self._ref_index_and_curve[1].get_xy()
-            ref_y_intp = self._reference_curve_interpolated(tuple(x_in), tuple(reference_curve_x), tuple(reference_curve_y))
+            ref_y_intp = self._reference_curve_interpolated(tuple(x_in),
+                                                            tuple(reference_curve_x),
+                                                            tuple(reference_curve_y),
+                                                            )
             y_in = y_in - ref_y_intp
 
         # Paste the curve into graph
@@ -129,22 +132,25 @@ class MatplotlibWidget(qtw.QWidget):
             if self._ref_index_and_curve[0] in ix:
                 self.toggle_reference_curve(None)
             else:
-                self._ref_index_and_curve[0] -= sum(i < self._ref_index_and_curve[0] for i in ix)  # summing booleans
+                self._ref_index_and_curve[0] -= sum(i < self._ref_index_and_curve[0] for i in ix)
+                # summing booleans
 
         lines_in_user_defined_order = self.get_lines_in_user_defined_order()
         for index_to_remove in sorted(ix, reverse=True):
             lines_in_user_defined_order[index_to_remove].remove()
             self._qlistwidget_indexes_of_lines = \
-                self._qlistwidget_indexes_of_lines[np.nonzero(self._qlistwidget_indexes_of_lines != index_to_remove)]
+                self._qlistwidget_indexes_of_lines[
+                    np.nonzero(self._qlistwidget_indexes_of_lines != index_to_remove)
+                    ]
             self._qlistwidget_indexes_of_lines[self._qlistwidget_indexes_of_lines > index_to_remove] -= 1
 
         if ix:
             self.update_figure()
 
     @lru_cache
-    def _reference_curve_interpolated(self, x:tuple, reference_curve_x:tuple, reference_curve_y:tuple):
+    def _reference_curve_interpolated(self, x: tuple, reference_curve_x: tuple, reference_curve_y: tuple):
         return np.interp(np.log(x), np.log(reference_curve_x), reference_curve_y, left=np.nan, right=np.nan)
-         
+
     @qtc.Slot()
     def toggle_reference_curve(self, ref_index_and_curve: (tuple, None)):
         if ref_index_and_curve is not None:
@@ -154,7 +160,10 @@ class MatplotlibWidget(qtw.QWidget):
             self._ref_index_and_curve = ref_index_and_curve
             for line2d in self.ax.get_lines():
                 x, y = line2d.get_xdata(), line2d.get_ydata()
-                ref_y_intp = self._reference_curve_interpolated(tuple(x), tuple(reference_curve_x), tuple(reference_curve_y))
+                ref_y_intp = self._reference_curve_interpolated(tuple(x),
+                                                                tuple(reference_curve_x),
+                                                                tuple(reference_curve_y),
+                                                                )
                 line2d.set_ydata(y - ref_y_intp)
 
             self.hide_show_line2d({self._ref_index_and_curve[0]: False})
@@ -164,13 +173,16 @@ class MatplotlibWidget(qtw.QWidget):
             reference_curve_x, reference_curve_y = self._ref_index_and_curve[1].get_xy()
             for line2d in self.ax.get_lines():
                 x, y = line2d.get_xdata(), line2d.get_ydata()
-                ref_y_intp = self._reference_curve_interpolated(tuple(x), tuple(reference_curve_x), tuple(reference_curve_y))
+                ref_y_intp = self._reference_curve_interpolated(tuple(x),
+                                                                tuple(reference_curve_x),
+                                                                tuple(reference_curve_y),
+                                                                )
                 line2d.set_ydata(y + ref_y_intp)
 
             self.hide_show_line2d({self._ref_index_and_curve[0]: True})
 
             self._ref_index_and_curve = None
-            
+
         else:
             # all other scenarios. no reference should be set.
             self._ref_index_and_curve = None
@@ -208,8 +220,6 @@ class MatplotlibWidget(qtw.QWidget):
             title = None
 
         return self.ax.legend(handles, labels, title=title)
-        
-        
 
     @qtc.Slot(dict)
     def change_lines_order(self, new_indexes: dict):
@@ -217,14 +227,14 @@ class MatplotlibWidget(qtw.QWidget):
 
         # Scan the whole list of lines to replace them one by one
         for line_index_in_graph in range(self._qlistwidget_indexes_of_lines.size):
-            current_location_in_qlist_widget = self._qlistwidget_indexes_of_lines[line_index_in_graph]            
+            current_location_in_qlist_widget = self._qlistwidget_indexes_of_lines[line_index_in_graph]
             new_location_in_qlist_widget = new_indexes[current_location_in_qlist_widget]
             self._qlistwidget_indexes_of_lines[line_index_in_graph] = new_location_in_qlist_widget
 
             # keep the reference index always correct
             if self._ref_index_and_curve and current_location_in_qlist_widget == self._ref_index_and_curve[0]:
                 self._ref_index_and_curve[0] = new_location_in_qlist_widget
-        
+
         self.update_figure(recalculate_limits=False)
 
     @qtc.Slot(int)
@@ -237,7 +247,7 @@ class MatplotlibWidget(qtw.QWidget):
             line.set_alpha(1)
         old_zorder = line.get_zorder()
         line.set_zorder(len(self.ax.get_lines()))
-        
+
         self.ax.draw_artist(line)
         self.canvas.draw_idle()
 
@@ -266,7 +276,7 @@ class MatplotlibWidget(qtw.QWidget):
                     line.set_label(label.removeprefix("_"))
             if not visible and (label := line.get_label())[0] != "_":
                 line.set_label("_" + label)
-            
+
             self.ax.draw_artist(line)
 
         if visibility_states:
@@ -279,7 +289,7 @@ class MatplotlibWidget(qtw.QWidget):
         any_visible = False
         for i, label in labels.items():
             line = lines_in_user_defined_order[i]
-            
+
             visible = line.get_alpha() in (None, 1)
             if visible:
                 new_label = label
