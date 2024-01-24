@@ -28,7 +28,13 @@ class MatplotlibWidget(qtw.QWidget):
     signal_good_beep = qtc.Signal()
     signal_bad_beep = qtc.Signal()
     available_styles = list(plt.style.available)
-
+    
+    def print_line_states(self):
+        print()
+        n_lines = self._qlistwidget_indexes_of_lines.size
+        for i, line in enumerate(self.get_lines_in_user_defined_order()):
+            print(i, line.get_label(), line.get_zorder())
+    
     def __init__(self, settings):
         self.app_settings = settings
         super().__init__()
@@ -59,6 +65,13 @@ class MatplotlibWidget(qtw.QWidget):
         self.set_grid_type()
 
         # https://matplotlib.org/stable/api/_as_gen/matplotlib._lines.line2d.html
+        
+        
+        # Print info continuously
+        # timer = qtc.QTimer(self)
+        # timer.timeout.connect(self.print_line_states)
+        # timer.start(2000)
+
 
     @qtc.Slot()
     def set_grid_type(self):
@@ -81,17 +94,25 @@ class MatplotlibWidget(qtw.QWidget):
         start_time = time.perf_counter()
 
         if update_legend:
+            print("----Start update legend")
+
             # Update zorders
             n_lines = self._qlistwidget_indexes_of_lines.size
             for i, line in enumerate(self.get_lines_in_user_defined_order()):
+                # print(i, line.get_label(), line.get_zorder())
+                # print("Settings zorders")
                 hide_offset = -1_000_000 if line.get_label()[0] == "_" else 0
                 line.set_zorder(n_lines - i + hide_offset)
 
             if self.ax.has_data() and self.app_settings.show_legend:
+                print("Updating legend.")
                 legend = self._create_ordered_legend()
                 self.ax.draw_artist(legend)
+
             else:
+                print("Removing legend")
                 self.ax.legend().remove()
+                print("----End update legend")
 
         if recalculate_limits:
             y_arrays = [line.get_ydata() for line in self.ax.get_lines()]
@@ -99,7 +120,7 @@ class MatplotlibWidget(qtw.QWidget):
             self.ax.set_ylim(y_min_max)
 
         self.canvas.draw_idle()
-        logger.info(f"Graph updated. {len(self.ax.get_lines())} lines.",
+        logger.info(f"Graph updated. {len(self.ax.get_lines())} lines."
                     f"\nTook {(time.perf_counter()-start_time)*1000:.4g}ms.")
 
     @qtc.Slot()
@@ -153,6 +174,7 @@ class MatplotlibWidget(qtw.QWidget):
 
     @qtc.Slot()
     def toggle_reference_curve(self, ref_index_and_curve: (tuple, None)):
+        # ref_index_and_curve: [index, curve] or None
         if ref_index_and_curve is not None:
             # new ref. curve introduced
             reference_curve_x, reference_curve_y = ref_index_and_curve[1].get_xy()
@@ -166,7 +188,7 @@ class MatplotlibWidget(qtw.QWidget):
                                                                 )
                 line2d.set_ydata(y - ref_y_intp)
 
-            self.hide_show_line2d({self._ref_index_and_curve[0]: False})
+            self.hide_show_line2d({self._ref_index_and_curve[0]: (None, False)})
 
         elif ref_index_and_curve is None and self._ref_index_and_curve is not None:
             # there was a reference curve active and now it is deactivated.
@@ -179,7 +201,10 @@ class MatplotlibWidget(qtw.QWidget):
                                                                 )
                 line2d.set_ydata(y + ref_y_intp)
 
-            self.hide_show_line2d({self._ref_index_and_curve[0]: True})
+            self.hide_show_line2d({self._ref_index_and_curve[0]: (None,
+                                                                  self._ref_index_and_curve[1].is_visible()
+                                                                  )
+                                   })
 
             self._ref_index_and_curve = None
 
@@ -210,6 +235,8 @@ class MatplotlibWidget(qtw.QWidget):
         handles = self._get_visible_lines_in_user_defined_order()
         if self.app_settings.max_legend_size > 0:
             handles = handles[:self.app_settings.max_legend_size]
+
+        # print([(line.get_label(), line.get_zorder()) for line in handles])
 
         labels = [line.get_label() for line in handles]
 
@@ -262,44 +289,87 @@ class MatplotlibWidget(qtw.QWidget):
         self.ax.draw_artist(line)
         self.canvas.draw_idle()
 
-    @qtc.Slot()
-    def hide_show_line2d(self, visibility_states: dict):
-        lines_in_user_defined_order = self.get_lines_in_user_defined_order()
-        for i, visible in visibility_states.items():
-            line = lines_in_user_defined_order[i]
-
-            alpha = 1 if visible else 0.1
-            line.set_alpha(alpha)
-
-            if visible:
-                while (label := line.get_label())[0] == "_":
-                    line.set_label(label.removeprefix("_"))
-            if not visible and (label := line.get_label())[0] != "_":
-                line.set_label("_" + label)
-
-            self.ax.draw_artist(line)
-
-        if visibility_states:
-            self.update_figure(recalculate_limits=False)
-
     @qtc.Slot(dict)
-    def update_labels(self, labels: dict):
+    def update_labels_and_visibilities(self, label_and_visibility:dict, update_figure=True):
+        # label_and_visibility contains tuples as values
+        # first value is label. give label without "_" prefixes
+        # second value is visibility. give boolean
+        
         lines_in_user_defined_order = self.get_lines_in_user_defined_order()
-
-        any_visible = False
-        for i, label in labels.items():
+        for i, (new_label, visible) in label_and_visibility.items():
+            
             line = lines_in_user_defined_order[i]
+            # print(line.get_label(), i, new_label, visible)
 
-            visible = line.get_alpha() in (None, 1)
-            if visible:
-                new_label = label
-                any_visible = True
+            if new_label is None:
+                new_label = line.get_label()
+
+            while new_label[0] == "_":
+                new_label = new_label.removeprefix("_")
+
+            if visible is True:
+                line.set_alpha(1)
+                line.set_label(new_label)
+
+            elif visible is False:
+                line.set_alpha(0.1)
+                line.set_label("_" + new_label)
             else:
-                new_label = "_" + label
-            line.set_label(new_label)
+                raise ValueError("Must remind the visibility due to Matplotlib canvas"
+                                 " tending to reset it on its own.")
+            # self.ax.draw_artist(line)  # optimization here???
 
-        if any_visible:
+        if label_and_visibility and update_figure:
             self.update_figure(recalculate_limits=False, update_legend=True)
+
+    # @qtc.Slot()
+    # def hide_show_line2d(self, visibility_states: dict):
+    #     lines_in_user_defined_order = self.get_lines_in_user_defined_order()
+    #     for i, visible in visibility_states.items():
+    #         line = lines_in_user_defined_order[i]
+
+    #         alpha = 1 if visible else 0.1
+    #         line.set_alpha(alpha)
+
+    #         if visible:
+    #             while (label := line.get_label())[0] == "_":
+    #                 line.set_label(label.removeprefix("_"))
+    #             new_label = label
+    #         if not visible and (label := line.get_label())[0] != "_":
+    #             line.set_label("_" + label)
+    #             new_label = "_" + label
+
+    #         line.set_label(new_label)
+
+    #         self.ax.draw_artist(line)
+
+    #     if visibility_states:
+    #         self.update_figure(recalculate_limits=False)
+
+    # @qtc.Slot(dict)
+    # def update_labels(self, labels: dict):
+    #     lines_in_user_defined_order = self.get_lines_in_user_defined_order()
+
+    #     print("----Start labels update")
+    #     any_visible = False
+    #     for i, label in labels.items():
+    #         line = lines_in_user_defined_order[i]  # you could uze zip to add this in the for loop
+
+    #         # all the line alphas get reset after an update of curves using matplotlib canvas buttons
+    #         # so here we need to collect again visibility states from the Qlist curve items
+
+    #         visible = True  # because it doesn't work
+
+    #         if visible:
+    #             new_label = label
+    #             any_visible = True
+    #         else:
+    #             new_label = "_" + label
+    #         line.set_label(new_label)
+
+    #     if any_visible:
+    #         self.update_figure(recalculate_limits=False, update_legend=True)
+    #         print("----End labels update")
 
     @qtc.Slot()
     def reset_colors(self):
