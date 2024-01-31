@@ -181,7 +181,7 @@ class UserForm(qtw.QWidget):
     def __init__(self, parent=None):
         super().__init__(parent=parent)
         self._layout = qtw.QFormLayout(self)  # the argument makes already here the "setLayout" for the widget
-        self._user_input_widgets = dict()  # this is a dict of objects that user give input in, such as a 
+        self.interactable_widgets = dict()  # this is a dict of objects that user give input in, such as a 
         # textbox or a checkmark. key is the name of the parameter. value is the widget itself.
         # buttons are also in here although they do not store a value.
 
@@ -197,17 +197,17 @@ class UserForm(qtw.QWidget):
             layout.addRow(obj)
 
         if hasattr(obj, "add_elements_to_dict"):
-            obj.add_elements_to_dict(self._user_input_widgets)
+            obj.add_elements_to_dict(self.interactable_widgets)
 
     def update_form_values(self, values_new: dict):
         # list to store widgets that did not receive a new value with "values_new"
         no_dict_key_for_widget = set(
-            [key for key, obj in self._user_input_widgets.items() if not isinstance(obj, qtw.QAbstractButton)]
+            [key for key, obj in self.interactable_widgets.items() if not isinstance(obj, qtw.QAbstractButton)]
             )  # works???????????????????????
         no_widget_for_dict_key = set()
         for key, value_new in values_new.items():
             try:
-                obj = self._user_input_widgets[key]
+                obj = self.interactable_widgets[key]
 
                 if isinstance(obj, qtw.QComboBox):
                     assert isinstance(value_new, dict)
@@ -252,7 +252,7 @@ class UserForm(qtw.QWidget):
         Puts them in a dictionary and returns.
         """
         values = {}
-        for key, obj in self._user_input_widgets.items():
+        for key, obj in self.interactable_widgets.items():
 
             if isinstance(obj, qtw.QAbstractButton):
                 continue
