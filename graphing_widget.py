@@ -290,7 +290,9 @@ class MatplotlibWidget(qtw.QWidget):
 
     @qtc.Slot(dict)
     def update_labels_and_visibilities(self, label_and_visibility:dict, update_figure=True):
-        # label_and_visibility contains tuples as values
+        # label_and_visibility
+        # keys are index of line in user defined order
+        # contains tuples as values
         # first value is label. give label without "_" prefixes
         # second value is visibility. give boolean
         
