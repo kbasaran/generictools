@@ -53,8 +53,8 @@ class MatplotlibWidget(qtw.QWidget):
         fig = Figure()
         fig.set_layout_engine("constrained")
         self.canvas = FigureCanvas(fig)
-        # Ideally one would use self.addToolBar here, but it is slightly
-        # incompatible between PyQt6 and other bindings, so we just add the
+        # Ideally one would use self.addToolBar here, but it is
+        # incompatible between PyQt6 and other bindings, so we add the
         # toolbar as a plain widget instead.
         self.navigation_toolbar = NavigationToolbar(self.canvas, self)
         layout.addWidget(self.navigation_toolbar)
@@ -92,25 +92,25 @@ class MatplotlibWidget(qtw.QWidget):
         start_time = time.perf_counter()
 
         if update_legend:
-            print("----Start update legend")
-
+            # print("----Start update legend")
+            
             # Update zorders
             n_lines = self._qlistwidget_indexes_of_lines.size
             for i, line in enumerate(self.get_lines_in_user_defined_order()):
                 # print(i, line.get_label(), line.get_zorder())
                 # print("Settings zorders")
-                hide_offset = -1_000_000 if line.get_label()[0] == "_" else 0
-                line.set_zorder(n_lines - i + hide_offset)
+                zorder_offset = -1_000_000 if line.get_label()[0] == "_" else 0
+                line.set_zorder(n_lines - i + zorder_offset)
 
             if self.ax.has_data() and self.app_settings.show_legend:
-                print("Updating legend.")
-                legend = self._create_ordered_legend()
-                self.ax.draw_artist(legend)
+              # print("Updating legend.")
+              self._create_ordered_legend()
+              # self.ax.draw_artist(legend)
 
             else:
-                print("Removing legend")
+                # print("Removing legend")
                 self.ax.legend().remove()
-                print("----End update legend")
+                # print("----End update legend")
 
         if recalculate_limits:
             y_arrays = [line.get_ydata() for line in self.ax.get_lines()]
@@ -120,6 +120,23 @@ class MatplotlibWidget(qtw.QWidget):
         self.canvas.draw_idle()
         logger.info(f"Graph updated. {len(self.ax.get_lines())} lines."
                     f"\nTook {(time.perf_counter()-start_time)*1000:.4g}ms.")
+
+    def _create_ordered_legend(self):
+        handles = self.get_visible_lines_in_user_defined_order()
+        if self.app_settings.max_legend_size > 0:
+            handles = handles[:self.app_settings.max_legend_size]
+
+        # print([(line.get_label(), line.get_zorder()) for line in handles])
+
+        # labels = [line.get_label() for line in handles]
+
+        if self._ref_index_and_curve:
+            title = "Relative to: " + self._ref_index_and_curve[1].get_full_name()
+            title = title.removesuffix(" - reference")
+        else:
+            title = None
+
+        self.ax.legend(handles=handles, title=title)
 
     @qtc.Slot()
     def add_line2d(self, i_insert: int, label: str, data: tuple, update_figure=True, line2d_kwargs={}):
@@ -186,7 +203,7 @@ class MatplotlibWidget(qtw.QWidget):
                                                                 )
                 line2d.set_ydata(y - ref_y_intp)
 
-            self.hide_show_line2d({self._ref_index_and_curve[0]: (None, False)})
+            self.update_labels_and_visibilities({self._ref_index_and_curve[0]: (None, False)})
 
         elif ref_index_and_curve is None and self._ref_index_and_curve is not None:
             # there was a reference curve active and now it is deactivated.
@@ -199,7 +216,7 @@ class MatplotlibWidget(qtw.QWidget):
                                                                 )
                 line2d.set_ydata(y + ref_y_intp)
 
-            self.hide_show_line2d({self._ref_index_and_curve[0]: (None,
+            self.update_labels_and_visibilities({self._ref_index_and_curve[0]: (None,
                                                                   self._ref_index_and_curve[1].is_visible()
                                                                   )
                                    })
@@ -228,23 +245,6 @@ class MatplotlibWidget(qtw.QWidget):
     def get_visible_lines_in_user_defined_order(self):
         lines_in_user_defined_order = self.get_lines_in_user_defined_order()
         return [line for line in lines_in_user_defined_order if line.get_alpha() in (None, 1)]
-
-    def _create_ordered_legend(self):
-        handles = self.get_visible_lines_in_user_defined_order()
-        if self.app_settings.max_legend_size > 0:
-            handles = handles[:self.app_settings.max_legend_size]
-
-        # print([(line.get_label(), line.get_zorder()) for line in handles])
-
-        labels = [line.get_label() for line in handles]
-
-        if self._ref_index_and_curve:
-            title = "Relative to: " + self._ref_index_and_curve[1].get_full_name()
-            title = title.removesuffix(" - reference")
-        else:
-            title = None
-
-        return self.ax.legend(handles, labels, title=title)
 
     @qtc.Slot(dict)
     def change_lines_order(self, new_indexes: dict):
