@@ -130,6 +130,16 @@ class PushButtonGroup(qtw.QWidget):
     def buttons(self) -> dict:
         return self._buttons
 
+class PushButton(qtw.QPushButton):
+    def __init__(self, name, label, tooltip):
+        self._name = name
+        super().__init__()
+        self.setText(label)
+        if tooltip:
+            self.setToolTip(tooltip)
+
+    def add_elements_to_dict(self, user_data_widgets: dict):
+        user_data_widgets[self._name] = self
 
 class ChoiceButtonGroup(qtw.QWidget):
     def __init__(self, group_name, names: dict, tooltips: dict, vertical=False):
@@ -200,6 +210,8 @@ class UserForm(qtw.QWidget):
             obj.add_elements_to_dict(self.interactable_widgets)
 
     def update_form_values(self, values_new: dict):
+        # Update the widget values from a dictionary
+        
         # list to store widgets that did not receive a new value with "values_new"
         no_dict_key_for_widget = set(
             [key for key, obj in self.interactable_widgets.items() if not isinstance(obj, qtw.QAbstractButton)]
