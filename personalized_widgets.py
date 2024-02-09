@@ -259,37 +259,48 @@ class UserForm(qtw.QWidget):
                              f"No data found to update the widget(s): '{no_dict_key_for_widget}'"
                              )
 
+    def get_value(self, name: str):
+        obj = self.interactable_widgets.get(name, None)
+        if obj is None:
+            raise ValueError(f"Obejct with name'{name}' not found.")
+
+        if isinstance(obj, qtw.QAbstractButton):
+            return
+
+        if isinstance(obj, qtw.QComboBox):
+            obj_value = {"items": [], "current_index": 0}
+            for i_item in range(obj.count()):
+                item_text = obj.itemText(i_item)
+                item_data = obj.itemData(i_item)
+                obj_value["items"].append((item_text, item_data))
+            obj_value["current_index"] = obj.currentIndex()
+            obj_value["current_data"] = obj.currentData()
+
+        elif isinstance(obj, qtw.QLineEdit):
+            obj_value = obj.text()
+
+        elif isinstance(obj, qtw.QButtonGroup):
+            obj_value = obj.checkedId()
+
+        elif isinstance(obj, qtw.QCheckBox):
+            obj_value = obj.isChecked()
+
+        else:
+            obj_value = obj.value()
+
+        return obj_value
+
+
     def get_form_values(self) -> dict:
         """Collects all values from the widgets in the form that have user input values.
         Puts them in a dictionary and returns.
         """
         values = {}
-        for key, obj in self.interactable_widgets.items():
+        for key in self.interactable_widgets.keys():
 
-            if isinstance(obj, qtw.QAbstractButton):
-                continue
-
-            if isinstance(obj, qtw.QComboBox):
-                obj_value = {"items": [], "current_index": 0}
-                for i_item in range(obj.count()):
-                    item_text = obj.itemText(i_item)
-                    item_data = obj.itemData(i_item)
-                    obj_value["items"].append((item_text, item_data))
-                obj_value["current_index"] = obj.currentIndex()
-
-            elif isinstance(obj, qtw.QLineEdit):
-                obj_value = obj.text()
-
-            elif isinstance(obj, qtw.QButtonGroup):
-                obj_value = obj.checkedId()
-
-            elif isinstance(obj, qtw.QCheckBox):
-                obj_value = obj.isChecked()
-
-            else:
-                obj_value = obj.value()
-
-            values[key] = obj_value
+            obj_value = self.get_value(key)
+            if obj_value:
+                values[key] = obj_value
 
         logger.debug("Return of 'get_form_values")
         for val, key in values.items():
