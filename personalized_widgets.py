@@ -400,7 +400,13 @@ class ErrorHandlerUser:
     def excepthook(self, etype, value, tb):
         error_msg_developer = ''.join(traceback.format_exception(etype, value, tb))
         error_info = traceback.format_exception(etype, value, tb)
-        error_msg_short = error_info[-2] + "\n\n" + error_info[-1]
+        
+        if isinstance(error_info, list) and len(error_info) > 2:
+            error_msg_short = error_info[-2] + "\n\n" + error_info[-1]
+            # bad solution
+        else:
+            error_msg_short = error_info
+            
         message_box = qtw.QMessageBox(qtw.QMessageBox.Warning,
                                       "Error    :(",
                                       error_msg_short +
