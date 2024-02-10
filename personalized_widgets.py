@@ -262,7 +262,7 @@ class UserForm(qtw.QWidget):
     def get_value(self, name: str):
         obj = self.interactable_widgets.get(name, None)
         if obj is None:
-            raise ValueError(f"Obejct with name'{name}' not found.")
+            raise ValueError(f"Object with name '{name}' not found.")
 
         if isinstance(obj, qtw.QAbstractButton):
             return
@@ -299,7 +299,7 @@ class UserForm(qtw.QWidget):
         for key in self.interactable_widgets.keys():
 
             obj_value = self.get_value(key)
-            if obj_value:
+            if obj_value is not None:
                 values[key] = obj_value
 
         logger.debug("Return of 'get_form_values")
