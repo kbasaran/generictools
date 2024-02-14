@@ -218,56 +218,51 @@ class UserForm(qtw.QWidget):
             )  # works???????????????????????
         no_widget_for_dict_key = set()
         for key, value_new in values_new.items():
-            try:
-                obj = self.interactable_widgets[key]
+            obj = self.interactable_widgets[key]
 
-                if isinstance(obj, qtw.QComboBox):
-                    assert isinstance(value_new, dict)
-                    existing_item_index = obj.findText(value_new["current_text"])
-                    if existing_item_index == -1:
-                        # the combobox does not have this stored option
-                        # clear the combobox
-                        obj.clear()
-                        # add all options from storage
-                        for item in value_new.get("items", []):
-                            obj.addItem(*item)
-                        # set to the right option
-                        obj.setCurrentIndex(value_new["current_index"])
-
-                    else:
-                        # the combobox already has the right options
-                        # we just set to the correct one
-                        obj.setCurrentIndex(existing_item_index)
-                        # also set its data again just in case
-                        obj.setItemData(existing_item_index, value_new["current_data"])
-
-                elif isinstance(obj, qtw.QLineEdit):
-                    assert isinstance(value_new, str)
-                    obj.setText(value_new)
-
-                elif isinstance(obj, qtw.QPushButton):
-                    raise TypeError(
-                        f"Don't know what to do with value_new={value_new} for button {key}.")
-
-                elif isinstance(obj, qtw.QButtonGroup):
-                    obj.button(value_new).setChecked(True)
-
-                elif isinstance(obj, qtw.QCheckBox):
-                    obj.setChecked(value_new)
+            if isinstance(obj, qtw.QComboBox):
+                assert isinstance(value_new, dict)
+                existing_item_index = obj.findText(value_new["current_text"])
+                if existing_item_index == -1:
+                    # the combobox does not have this stored option
+                    # clear the combobox
+                    obj.clear()
+                    # add all options from storage
+                    for item in value_new.get("items", []):
+                        obj.addItem(*item)
+                    # set to the right option
+                    obj.setCurrentIndex(value_new["current_index"])
 
                 else:
-                    assert type(value_new) == type(obj.value())
-                    obj.setValue(value_new)
+                    # the combobox already has the right options
+                    # we just set to the correct one
+                    obj.setCurrentIndex(existing_item_index)
+                    # also set its data again just in case
+                    obj.setItemData(existing_item_index, value_new["current_data"])
 
-                # finally
-                no_dict_key_for_widget.discard(key)
+            elif isinstance(obj, qtw.QLineEdit):
+                assert isinstance(value_new, str)
+                obj.setText(value_new)
 
-            except KeyError:
-                no_widget_for_dict_key.update((key,))
+            elif isinstance(obj, qtw.QPushButton):
+                raise TypeError(
+                    f"Don't know what to do with value_new={value_new} for button {key}.")
+
+            elif isinstance(obj, qtw.QButtonGroup):
+                obj.button(value_new).setChecked(True)
+
+            elif isinstance(obj, qtw.QCheckBox):
+                obj.setChecked(value_new)
+
+            else:
+                assert type(value_new) == type(obj.value())
+                obj.setValue(value_new)
+
+            # finally
+            no_dict_key_for_widget.discard(key)
 
         if no_widget_for_dict_key | no_dict_key_for_widget:
-            raise ValueError(f"No widget(s) found for the keys: '{no_widget_for_dict_key}'\n"
-                             f"No data found to update the widget(s): '{no_dict_key_for_widget}'"
+            raise ValueError(f"No data found to update the widget(s): '{no_dict_key_for_widget}'"
                              )
 
     def get_value(self, name: str):
