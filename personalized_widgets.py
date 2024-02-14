@@ -211,7 +211,7 @@ class UserForm(qtw.QWidget):
 
     def update_form_values(self, values_new: dict):
         # Update the widget values from a dictionary
-        
+
         # list to store widgets that did not receive a new value with "values_new"
         no_dict_key_for_widget = set(
             [key for key, obj in self.interactable_widgets.items() if not isinstance(obj, qtw.QAbstractButton)]
@@ -223,12 +223,23 @@ class UserForm(qtw.QWidget):
 
                 if isinstance(obj, qtw.QComboBox):
                     assert isinstance(value_new, dict)
-                    if "items" in value_new.keys():
+                    existing_item_index = obj.findText(value_new["current_text"])
+                    if existing_item_index == -1:
+                        # the combobox does not have this stored option
+                        # clear the combobox
                         obj.clear()
-                        # assert all([key in value_new.keys() for key in ["items", "current_index"]])
+                        # add all options from storage
                         for item in value_new.get("items", []):
                             obj.addItem(*item)
-                    obj.setCurrentIndex(value_new["current_index"])
+                        # set to the right option
+                        obj.setCurrentIndex(value_new["current_index"])
+
+                    else:
+                        # the combobox already has the right options
+                        # we just set to the correct one
+                        obj.setCurrentIndex(existing_item_index)
+                        # also set its data again just in case
+                        obj.setItemData(existing_item_index, value_new["current_data"])
 
                 elif isinstance(obj, qtw.QLineEdit):
                     assert isinstance(value_new, str)
@@ -275,6 +286,7 @@ class UserForm(qtw.QWidget):
                 obj_value["items"].append((item_text, item_data))
             obj_value["current_index"] = obj.currentIndex()
             obj_value["current_data"] = obj.currentData()
+            obj_value["current_text"] = obj.currentText()
 
         elif isinstance(obj, qtw.QLineEdit):
             obj_value = obj.text()
