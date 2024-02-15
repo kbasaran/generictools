@@ -231,7 +231,11 @@ class UserForm(qtw.QWidget):
                     for item in value_new.get("items", []):
                         obj.addItem(*item)
                     # set to the right option
-                    obj.setCurrentIndex(value_new["current_index"])
+                    if "current_index" not in value_new.keys():
+                        # to cover cases where index was not stored. for backwards compatibility.
+                        obj.setCurrentText(value_new["current_text"])
+                    else:
+                        obj.setCurrentIndex(value_new["current_index"])
 
                 else:
                     # the combobox already has the right options
@@ -255,6 +259,10 @@ class UserForm(qtw.QWidget):
                 obj.setChecked(value_new)
 
             else:
+                print(key)
+                print(value_new)
+                print(obj.value())
+
                 assert type(value_new) == type(obj.value())
                 obj.setValue(value_new)
 
