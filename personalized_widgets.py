@@ -39,9 +39,10 @@ class FloatSpinBox(qtw.QDoubleSpinBox):
     def __init__(self, name, tooltip,
                  decimals=2,
                  min_max=(0.01, 999.99),
-                 ratio_to_SI=1,
+                 coeff_for_SI=1,
                  ):
         self._name = name
+        self.coeff_for_SI = coeff_for_SI
         super().__init__()
         if tooltip:
             self.setToolTip(tooltip)
@@ -57,9 +58,10 @@ class FloatSpinBox(qtw.QDoubleSpinBox):
 class IntSpinBox(qtw.QSpinBox):
     def __init__(self, name, tooltip,
                  min_max=(0, 999999),
-                 ratio_to_SI=1,
+                 coeff_for_SI=1,
                  ):
         self._name = name
+        self.coeff_for_SI = coeff_for_SI
         super().__init__()
         if tooltip:
             self.setToolTip(tooltip)
