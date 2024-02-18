@@ -230,17 +230,28 @@ class UserForm(qtw.QWidget):
                     # clear the combobox
                     obj.clear()
                     # add all options from storage
-                    for item in value_new.get("items", []):
-                        obj.addItem(*item)
-                    # set to the right option
-                    if "current_index" not in value_new.keys():
-                        # to cover cases where index was not stored. for backwards compatibility.
-                        obj.setCurrentText(value_new["current_text"])
+                    items = value_new.get("items", [])
+                    current_text = value_new["current_text"]
+                    current_data = value_new["current_data"]
+
+                    # if items are available in loaded values
+                    if items:
+                        for item in items:
+                            obj.addItem(*item)
+
+                        if "current_index" not in value_new.keys():
+                            # to cover cases where index was not stored. for backwards compatibility.
+                            obj.setCurrentText(current_text)
+                        else:
+                            obj.setCurrentIndex(value_new["current_index"])
+
+                    # otherwise add only the item of last selection
                     else:
-                        obj.setCurrentIndex(value_new["current_index"])
+                        obj.addItem(current_text, current_data)
+                        obj.setCurrentIndex(0)
 
                 else:
-                    # the combobox already has the right options
+                    # the combobox already has the right item options
                     # we just set to the correct one
                     obj.setCurrentIndex(existing_item_index)
                     # also set its data again just in case
@@ -261,10 +272,6 @@ class UserForm(qtw.QWidget):
                 obj.setChecked(value_new)
 
             else:
-                print(key)
-                print(value_new)
-                print(obj.value())
-
                 assert type(value_new) == type(obj.value())
                 obj.setValue(value_new)
 
