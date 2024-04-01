@@ -1,5 +1,6 @@
 from PySide6 import QtWidgets as qtw
 from PySide6 import QtCore as qtc
+from pathlib import Path
 
 qapp = qtw.QApplication.instance()
 if not qapp:
@@ -12,11 +13,12 @@ layout.addWidget(label)
 mw.setLayout(layout)
 
 
-app_definitions = {"app_name": "Linecraft",
+app_definitions = {"app_name": "Test Signal Maker",
                    "version": "0.2.1",
                    # "version": "Test build " + today.strftime("%Y.%m.%d"),
-                   "description": "Linecraft - Frequency response plotting and statistics",
-                   "copyright": "Copyright (C) 2023 Kerem Basaran",
+                   "description": "Test Signal Maker - Loudspeaker test signal tool",
+                   "copyright": "Copyright (C) 2024 Kerem Basaran",
+                   "icon_path": str(Path("./logo/icon.ico")),
                    "author": "Kerem Basaran",
                    "author_short": "kbasaran",
                    "email": "kbasaran@gmail.com",
