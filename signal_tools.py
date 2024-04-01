@@ -940,9 +940,9 @@ def calculate_3rd_octave_bands(time_sig: np.array, FS: int) -> tuple:
     start_time = time.perf_counter()
     center_frequencies = ac.standards.iec_61260_1_2014.NOMINAL_THIRD_OCTAVE_CENTER_FREQUENCIES
 
-    n_arrays = min(max(multiprocessing.cpu_count()-1, len(time_sig) // 2**16 + 1), len(time_sig) // FS)
+    n_arrays = min(max(multiprocessing.cpu_count()-1, len(time_sig) // 2**16 + 1), len(time_sig) // (FS * 5) + 1)
     # 65536 pieces maximum. 2**16. no less than the CPU count - 1.
-    # 1 second minimum.
+    # 5 seconds minimum.
     logging.debug(f"Calculating octave bands by dividing {len(time_sig)} points signal into {n_arrays} pieces.")
     arrays = np.array_split(time_sig, n_arrays)
     third_oct_pows_array = np.empty((n_arrays, len(center_frequencies)))
