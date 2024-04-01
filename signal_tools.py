@@ -6,6 +6,8 @@ from scipy import interpolate as intp
 from scipy.ndimage import gaussian_filter
 from scipy import signal as sig
 from functools import lru_cache
+import time
+import multiprocessing
 
 
 import logging
@@ -930,6 +932,29 @@ def calculate_graph_limits(y_arrays, multiple=5, clearance_up_down=(2, 1)):
         return y_min, y_max
     else:
         return None, None
+
+def third_octave_power(sig, FS, center_frequencies):
+    return tuple(10**(ac.signal.third_octaves(sig, FS, frequencies=center_frequencies)[1] / 10))
+
+def calculate_3rd_octave_bands(time_sig: np.array, FS: int) -> tuple:
+    start_time = time.perf_counter()
+    center_frequencies = ac.standards.iec_61260_1_2014.NOMINAL_THIRD_OCTAVE_CENTER_FREQUENCIES
+
+    n_arrays = min(max(multiprocessing.cpu_count()-1, len(time_sig) // 2**16 + 1), len(time_sig) // FS)
+    # 65536 pieces maximum. 2**16. no less than the CPU count - 1.
+    # 1 second minimum.
+    logging.debug(f"Calculating octave bands by dividing {len(time_sig)} points signal into {n_arrays} pieces.")
+    arrays = np.array_split(time_sig, n_arrays)
+    third_oct_pows_array = np.empty((n_arrays, len(center_frequencies)))
+    with multiprocessing.Pool(processes=len(arrays)) as p:
+        third_oct_pows = p.starmap(third_octave_power, [(array, FS, center_frequencies) for array in arrays])
+    for i, array in enumerate(arrays):
+        third_oct_pows_array[i, :] = third_oct_pows[i]
+
+    third_oct_pow_averages = (10 * np.log10(np.average(third_oct_pows_array, axis=0))) - 94
+    logger.debug(f"Calculated 3rd octave bands in {time.perf_counter() - start_time:.2f}s")
+
+    return center_frequencies, third_oct_pow_averages
 
 
 if __name__ == "__main__":
