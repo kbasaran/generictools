@@ -166,10 +166,10 @@ class TestSignal():
 
         self.analysis += (f"\nCrest Factor: {self.CF:.4g}x, {self.CFdB:.2f}dB"
                           + f"\nPositive and negative peaks: {self.pos_peak:.5g}, {self.neg_peak:.5g}"
-                          + f"\nMean and RMS: {self.mean:.5g}, {self.RMS:.5g}"
+                          + f"\nMean, RMS: {self.mean:.5g}, {self.RMS:.5g}"
                           + f"\nSample rate: {self.FS} Hz"
                           + f"\nDuration: {self.T:.2f} seconds"
-                          + f"\nSize in memory and data type: {self.time_sig.nbytes / 1_000_000:.2f} MB, {self.time_sig.dtype}"
+                          + f"\nSize in memory, data type: {self.time_sig.nbytes / 1_000_000:.2f} MB, {self.time_sig.dtype}"
                           + f"\nChannel count: {self.channel_count()}"
                           )
 
@@ -939,9 +939,7 @@ def calculate_3rd_octave_bands(time_sig: np.array, FS: int) -> tuple:
     start_time = time.perf_counter()
     center_frequencies = ac.standards.iec_61260_1_2014.NOMINAL_THIRD_OCTAVE_CENTER_FREQUENCIES
 
-    n_arrays = min(max(multiprocessing.cpu_count()-1, len(time_sig) // 2**16 + 1), len(time_sig) // (FS * 5) + 1)
-    # 65536 pieces maximum. 2**16. no less than the CPU count - 1.
-    # 5 seconds minimum.
+    n_arrays = len(time_sig) // (FS * 10) + 1  # split the signal into 10 second chunks
     logging.debug(f"Calculating octave bands by dividing {len(time_sig)} points signal into {n_arrays} pieces.")
     arrays = np.array_split(time_sig, n_arrays)
     third_oct_pows_array = np.empty((n_arrays, len(center_frequencies)))
