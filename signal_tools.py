@@ -165,12 +165,11 @@ class TestSignal():
             self.analysis += ("\n" + self.initial_data_analysis)
 
         self.analysis += (f"\nCrest Factor: {self.CF:.4g}x, {self.CFdB:.2f}dB"
-                          + f"\nRMS: {self.RMS:.5g}"
-                          + f"\nPositive peak: {self.pos_peak:.5g}"
-                          + f"\nNegative peak: {self.neg_peak:.5g}"
-                          + f"\nMean: {self.mean:.5g}"
+                          + f"\nPositive and negative peaks: {self.pos_peak:.5g}, {self.neg_peak:.5g}"
+                          + f"\nMean and RMS: {self.mean:.5g}, {self.RMS:.5g}"
                           + f"\nSample rate: {self.FS} Hz"
                           + f"\nDuration: {self.T:.2f} seconds"
+                          + f"\nSize in memory and data type: {self.time_sig.nbytes / 1_000_000:.2f} MB, {self.time_sig.dtype}"
                           + f"\nChannel count: {self.channel_count()}"
                           )
 
