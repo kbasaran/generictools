@@ -943,7 +943,8 @@ def calculate_3rd_octave_bands(time_sig: np.array, FS: int) -> tuple:
     logging.debug(f"Calculating octave bands by dividing {len(time_sig)} points signal into {n_arrays} pieces.")
     arrays = np.array_split(time_sig, n_arrays)
     third_oct_pows_array = np.empty((n_arrays, len(center_frequencies)))
-    with multiprocessing.Pool(processes=len(arrays)) as p:
+    
+    with multiprocessing.Pool(processes=None) as p:  # None means use as many processes as cpu count
         third_oct_pows = p.starmap(third_octave_power, [(array, FS, center_frequencies) for array in arrays])
     for i, array in enumerate(arrays):
         third_oct_pows_array[i, :] = third_oct_pows[i]
