@@ -56,11 +56,11 @@ class TestSignal():
         self.apply_processing(**kwargs)
 
     def reuse_existing(self, **kwargs):
-        if kwargs["FS"] != self.FS:
-            raise NotImplementedError("Resampling of signal not implemented.")
         self.apply_processing(**kwargs)
 
     def apply_processing(self, **kwargs):
+        if "FS" in kwargs.keys():
+            self.apply_resampling(kwargs["FS"])
         if "filters" in kwargs.keys():
             self.apply_filters(**kwargs)
         if "compression" in kwargs.keys():
@@ -177,6 +177,14 @@ class TestSignal():
             self.analysis += ("\n\nSignal includes fade in/out of "
                               + self.applied_fade_in_duration + "."
                               )
+            
+    def apply_resampling(self, new_sample_rate):
+        if new_sample_rate < self.FS:
+            raise NotImplementedError("Downsampling of signal not implemented.")
+        else:
+            T = self.time_sig.shape[0] / self.FS
+            N_new = round(new_sample_rate * T)
+            self.time_sig = sig.resample(self.time_sig, N_new)
 
     def apply_compression(self, **kwargs):
         """
