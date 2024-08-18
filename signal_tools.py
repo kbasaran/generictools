@@ -184,7 +184,8 @@ class TestSignal():
         else:
             T = self.time_sig.shape[0] / self.FS
             N_new = round(new_sample_rate * T)
-            self.time_sig = sig.resample(self.time_sig, N_new)
+            self.time_sig = sig.resample(self.time_sig, N_new) 
+            self.FS = new_sample_rate
 
     def apply_compression(self, **kwargs):
         """

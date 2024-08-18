@@ -14,7 +14,7 @@ mw.setLayout(layout)
 
 
 app_definitions = {"app_name": "Test Signal Maker",
-                   "version": "0.2.1",
+                   "version": "0.2.3",
                    # "version": "Test build " + today.strftime("%Y.%m.%d"),
                    "description": "Test Signal Maker - Loudspeaker test signal tool",
                    "copyright": "Copyright (C) 2024 Kerem Basaran",
