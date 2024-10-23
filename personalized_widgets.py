@@ -38,7 +38,7 @@ else:
 class FloatSpinBox(qtw.QDoubleSpinBox):
     def __init__(self, name, tooltip,
                  decimals=2,
-                 min_max=(0.01, 999.99),
+                 min_max=(0.01, 9999.99),
                  coeff_for_SI=1,
                  ):
         self._name = name
