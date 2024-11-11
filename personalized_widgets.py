@@ -271,8 +271,10 @@ class UserForm(qtw.QWidget):
             elif isinstance(obj, qtw.QCheckBox):
                 obj.setChecked(value_new)
 
+            elif type(value_new) in [int, float]:
+                obj.setValue(value_new / obj.coeff_for_SI)
+
             else:
-                assert type(value_new) == type(obj.value())
                 obj.setValue(value_new)
 
             # finally
@@ -310,7 +312,10 @@ class UserForm(qtw.QWidget):
             obj_value = obj.isChecked()
 
         else:
-            obj_value = obj.value()
+            if obj.coeff_for_SI:
+                obj_value = obj.value() * obj.coeff_for_SI
+            else:
+                obj_value = obj.value()
 
         return obj_value
 
