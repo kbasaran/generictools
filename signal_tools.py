@@ -8,6 +8,7 @@ from scipy import signal as sig
 from functools import lru_cache
 import time
 import multiprocessing
+from functools import lru_cache
 
 
 import logging
@@ -728,6 +729,7 @@ def calculate_third_oct_power_from_pressure(p, FS):
     return third_oct_freqs, ac.signal.third_octaves(p, FS, frequencies=third_oct_freqs)[1]
 
 
+@lru_cache
 def generate_log_spaced_freq_list(freq_start, freq_end, ppo, must_include_freq=1000, superset=False):
     """
     Create a numpy array for frequencies to use in calculation.
