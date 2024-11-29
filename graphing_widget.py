@@ -162,6 +162,12 @@ class MatplotlibWidget(qtw.QWidget):
         if update_figure:
             self.update_figure()
 
+
+    @qtc.Slot()
+    def clear_graph(self):
+        ix_to_remove = self._get_line_indexes_in_user_defined_order()
+        self.remove_multiple_line2d(ix_to_remove)       
+
     @qtc.Slot(list)
     def remove_multiple_line2d(self, ix: list):
         if self._ref_index_and_curve:
