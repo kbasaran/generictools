@@ -162,11 +162,11 @@ class MatplotlibWidget(qtw.QWidget):
         if update_figure:
             self.update_figure()
 
-
     @qtc.Slot()
     def clear_graph(self):
         ix_to_remove = self._get_line_indexes_in_user_defined_order()
-        self.remove_multiple_line2d(ix_to_remove)       
+        self.remove_multiple_line2d(ix_to_remove)
+        self.ax.set_prop_cycle(None)
 
     @qtc.Slot(list)
     def remove_multiple_line2d(self, ix: list):
@@ -186,7 +186,7 @@ class MatplotlibWidget(qtw.QWidget):
                     ]
             self._qlistwidget_indexes_of_lines[self._qlistwidget_indexes_of_lines > index_to_remove] -= 1
 
-        if ix:
+        if len(ix) > 0:
             self.update_figure()
 
     @lru_cache
