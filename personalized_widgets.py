@@ -38,7 +38,7 @@ else:
 class FloatSpinBox(qtw.QDoubleSpinBox):
     def __init__(self, name, tooltip,
                  decimals=2,
-                 min_max=(0.01, 9999.99),
+                 min_max=(None, None),
                  coeff_for_SI=1,
                  ):
         self._name = name
@@ -48,8 +48,16 @@ class FloatSpinBox(qtw.QDoubleSpinBox):
             self.setToolTip(tooltip)
         self.setStepType(qtw.QAbstractSpinBox.StepType.AdaptiveDecimalStepType)
         self.setDecimals(decimals)
-        if min_max:
-            self.setRange(*min_max)
+
+        if min_max[0] is not None:
+            self.setMinimum(min_max[0])
+        else:
+            self.setMinimum(0)
+
+        if min_max[1] is not None:
+            self.setMaximum(min_max[1])
+        else:
+            self.setMaximum((1000_000 - 1) / 10**self.decimals())
 
     def add_elements_to_dict(self, user_data_widgets: dict):
         user_data_widgets[self._name] = self
@@ -57,7 +65,7 @@ class FloatSpinBox(qtw.QDoubleSpinBox):
 
 class IntSpinBox(qtw.QSpinBox):
     def __init__(self, name, tooltip,
-                 min_max=(0, 999999),
+                 min_max=(None, None),
                  coeff_for_SI=1,
                  ):
         self._name = name
@@ -65,8 +73,16 @@ class IntSpinBox(qtw.QSpinBox):
         super().__init__()
         if tooltip:
             self.setToolTip(tooltip)
-        if min_max:
-            self.setRange(*min_max)
+
+        if min_max[0] is not None:
+            self.setMinimum(min_max[0])
+        else:
+            self.setMinimum(0)
+
+        if min_max[1] is not None:
+            self.setMaximum(min_max[1])
+        else:
+            self.setMaximum(99_999)
 
     def add_elements_to_dict(self, user_data_widgets: dict):
         user_data_widgets[self._name] = self
