@@ -88,7 +88,7 @@ class MatplotlibWidget(qtw.QWidget):
                 self.ax.grid(visible=True, which="minor", axis='both')
 
     @qtc.Slot()
-    def update_figure(self, recalculate_limits=True, update_legend=True):
+    def update_figure(self, recalculate_limits=True, update_legend=True, data_type="SPL"):
         start_time = time.perf_counter()
 
         if update_legend:
@@ -112,7 +112,7 @@ class MatplotlibWidget(qtw.QWidget):
                 self.ax.legend().remove()
                 # print("----End update legend")
 
-        if recalculate_limits:
+        if recalculate_limits and data_type == "SPL":
             y_arrays = [line.get_ydata() for line in self.ax.get_lines()]
             y_min_max = signal_tools.calculate_graph_limits(y_arrays, multiple=5, clearance_up_down=(2, 1))
             self.ax.set_ylim(y_min_max)
