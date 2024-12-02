@@ -41,7 +41,7 @@ class MatplotlibWidget(qtw.QWidget):
         layout = qtw.QVBoxLayout(self)
         self._ref_index_and_curve = None
         self._qlistwidget_indexes_of_lines = np.array([], dtype=int)
-        self.set_ylimit_policy(None)
+        self.set_y_limits_policy(None)
 
         # ---- Set the desired style
         desired_style = self.app_settings.matplotlib_style
@@ -88,13 +88,10 @@ class MatplotlibWidget(qtw.QWidget):
             if "minor" in self.app_settings.graph_grids:
                 self.ax.grid(visible=True, which="minor", axis='both')
     
-    def set_ylimit_policy(self, policy_name, **kwargs):
-        if policy_name == None:
-            self.y_limits_policy = None
-        else:
-            self.y_limits_policy = {"name": policy_name,
-                                    "kwargs": kwargs,
-                                    }
+    def set_y_limits_policy(self, policy_name, **kwargs):
+        self.y_limits_policy = {"name": policy_name,
+                                "kwargs": kwargs,
+                                }
 
     @qtc.Slot()
     def update_figure(self, recalculate_limits=True, update_legend=True):
@@ -121,18 +118,25 @@ class MatplotlibWidget(qtw.QWidget):
                 self.ax.legend().remove()
                 # print("----End update legend")
 
-        if recalculate_limits and self.y_limits_policy:
-            if self.y_limits_policy["name"] == "SPL":
+        if recalculate_limits:
+            self.ax.relim()
+
+            if self.y_limits_policy["name"] is None:
+                self.ax.autoscale(enable=True, axis="both")
+
+            elif self.y_limits_policy["name"] == "SPL":
                 y_arrays = [line.get_ydata() for line in self.ax.get_lines()]
                 y_min_max = signal_tools.calculate_graph_limits(y_arrays)
+                self.ax.set_ylim(y_min_max)
+
             elif self.y_limits_policy["name"] == "fixed":
                 kwargs = self.y_limits_policy["kwargs"]
                 y_min_max = (kwargs["min"], kwargs["max"])
-            self.ax.set_ylim(y_min_max)
+                self.ax.set_ylim(y_min_max)
 
         self.canvas.draw_idle()
-        logger.info(f"Graph updated. {len(self.ax.get_lines())} lines."
-                    f"\nTook {(time.perf_counter()-start_time)*1000:.4g}ms.")
+        logger.debug(f"Graph updated. {len(self.ax.get_lines())} lines."
+                     f"\nTook {(time.perf_counter()-start_time)*1000:.4g}ms.")
 
     def _create_ordered_legend(self):
         handles = self.get_visible_lines_in_user_defined_order()
