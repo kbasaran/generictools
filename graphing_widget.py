@@ -41,6 +41,7 @@ class MatplotlibWidget(qtw.QWidget):
         layout = qtw.QVBoxLayout(self)
         self._ref_index_and_curve = None
         self._qlistwidget_indexes_of_lines = np.array([], dtype=int)
+        self.set_ylimit_policy(None)
 
         # ---- Set the desired style
         desired_style = self.app_settings.matplotlib_style
@@ -86,6 +87,14 @@ class MatplotlibWidget(qtw.QWidget):
                 self.ax.grid(visible=True, which="major", axis='both')
             if "minor" in self.app_settings.graph_grids:
                 self.ax.grid(visible=True, which="minor", axis='both')
+    
+    def set_ylimit_policy(self, policy_name, **kwargs):
+        if policy_name == None:
+            self.y_limits_policy = None
+        else:
+            self.y_limits_policy = {"name": policy_name,
+                                    "kwargs": kwargs,
+                                    }
 
     @qtc.Slot()
     def update_figure(self, recalculate_limits=True, update_legend=True):
@@ -112,9 +121,13 @@ class MatplotlibWidget(qtw.QWidget):
                 self.ax.legend().remove()
                 # print("----End update legend")
 
-        if recalculate_limits:
-            y_arrays = [line.get_ydata() for line in self.ax.get_lines()]
-            y_min_max = signal_tools.calculate_graph_limits(y_arrays, multiple=5, clearance_up_down=(2, 1))
+        if recalculate_limits and self.y_limits_policy:
+            if self.y_limits_policy["name"] == "SPL":
+                y_arrays = [line.get_ydata() for line in self.ax.get_lines()]
+                y_min_max = signal_tools.calculate_graph_limits(y_arrays)
+            elif self.y_limits_policy["name"] == "fixed":
+                kwargs = self.y_limits_policy["kwargs"]
+                y_min_max = (kwargs["min"], kwargs["max"])
             self.ax.set_ylim(y_min_max)
 
         self.canvas.draw_idle()

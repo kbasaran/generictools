@@ -971,7 +971,7 @@ def iqr_analysis(curves_xy: dict, outlier_fence_iqr):
         )
 
 
-def calculate_graph_limits(y_arrays, multiple=5, clearance_up_down=(2, 1)):
+def calculate_graph_limits(y_arrays, multiple=5, clearance_up_down=(2, 1)) -> tuple:
 
     def floor_to_multiple(number, multiple, clearance_down):
         return multiple * np.floor((number - clearance_down) / multiple)
