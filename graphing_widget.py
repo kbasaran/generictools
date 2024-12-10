@@ -93,6 +93,9 @@ class MatplotlibWidget(qtw.QWidget):
                                 "kwargs": kwargs,
                                 }
 
+    def set_title(self, title):
+        self.ax.set_title(title)
+
     @qtc.Slot()
     def update_figure(self, recalculate_limits=True, update_legend=True):
         start_time = time.perf_counter()
