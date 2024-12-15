@@ -35,7 +35,7 @@ class MatplotlibWidget(qtw.QWidget):
         for i, line in enumerate(self.get_lines_in_user_defined_order()):
             print(i, line.get_label(), line.get_zorder())
 
-    def __init__(self, settings):
+    def __init__(self, settings, layout_engine="constrained"):
         self.app_settings = settings
         super().__init__()
         layout = qtw.QVBoxLayout(self)
@@ -52,7 +52,7 @@ class MatplotlibWidget(qtw.QWidget):
 
         # ---- Create the figure and axes
         fig = Figure()
-        fig.set_layout_engine("constrained")
+        fig.set_layout_engine(layout_engine)
         self.canvas = FigureCanvas(fig)
         # Ideally one would use self.addToolBar here, but it is
         # incompatible between PyQt6 and other bindings, so we add the
