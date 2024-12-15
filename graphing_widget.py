@@ -122,7 +122,9 @@ class MatplotlibWidget(qtw.QWidget):
                 # print("----End update legend")
 
         if recalculate_limits:
+            self.ax.yaxis.set_major_locator(plt.AutoLocator())
             self.ax.relim()
+
 
             if self.y_limits_policy["name"] is None:
                 self.ax.autoscale(enable=True, axis="both")
@@ -130,6 +132,19 @@ class MatplotlibWidget(qtw.QWidget):
             elif self.y_limits_policy["name"] == "SPL":
                 y_arrays = [line.get_ydata() for line in self.ax.get_lines()]
                 y_min_max = signal_tools.calculate_graph_limits(y_arrays)
+                self.ax.set_ylim(y_min_max)
+            
+            elif self.y_limits_policy["name"] == "impedance":
+                y_arrays = [line.get_ydata() for line in self.ax.get_lines()]
+                y_min_max = 0, signal_tools.calculate_graph_limits(y_arrays,
+                                                                   multiple=5,
+                                                                   clearance_up_down=(1, 0),
+                                                                   )[1]
+                self.ax.set_ylim(y_min_max)
+            
+            elif self.y_limits_policy["name"] == "phase":
+                y_min_max = (-180, 180)
+                self.ax.set_yticks(range(-180, 180+1, 90))
                 self.ax.set_ylim(y_min_max)
 
             elif self.y_limits_policy["name"] == "fixed":
