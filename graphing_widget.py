@@ -130,17 +130,20 @@ class MatplotlibWidget(qtw.QWidget):
                 self.ax.autoscale(enable=True, axis="both")
 
             elif self.y_limits_policy["name"] == "SPL":
-                y_arrays = [line.get_ydata() for line in self.ax.get_lines()]
-                y_min_max = signal_tools.calculate_graph_limits(y_arrays)
-                self.ax.set_ylim(y_min_max)
-            
+                y_arrays = [line.get_ydata() for line in self.ax.get_lines() if "Xpeak limited" not in line.get_label()]
+                if y_arrays:
+                    y_max = max([max(arr) for arr in y_arrays])
+                    y_min = min([min(arr) for arr in y_arrays])
+                    graph_max = 5 * np.ceil((y_max + 3) / 5)
+                    graph_min = 5 * np.floor(min(55, max(30, graph_max - y_min)) / 5)
+                    self.ax.set_ylim((graph_min, graph_max))
+
             elif self.y_limits_policy["name"] == "impedance":
                 y_arrays = [line.get_ydata() for line in self.ax.get_lines()]
-                y_min_max = 0, signal_tools.calculate_graph_limits(y_arrays,
-                                                                   multiple=5,
-                                                                   clearance_up_down=(1, 0),
-                                                                   )[1]
-                self.ax.set_ylim(y_min_max)
+                if y_arrays:
+                    y_max = max([max(arr) for arr in y_arrays])
+                    graph_max = 5 * np.ceil((y_max + 2) / 5)
+                    self.ax.set_ylim((0, graph_max))
             
             elif self.y_limits_policy["name"] == "phase":
                 y_min_max = (-180, 180)
