@@ -133,16 +133,18 @@ class MatplotlibWidget(qtw.QWidget):
                 y_arrays = [line.get_ydata() for line in self.ax.get_lines() if "Xpeak limited" not in line.get_label()]
                 if y_arrays:
                     y_max = max([max(arr) for arr in y_arrays])
-                    graph_max = 5 * np.ceil((y_max + 2) / 5)
-                    self.ax.set_ylim((graph_max-60, graph_max))
+                    y_min = min([min(arr) for arr in y_arrays])
+                    graph_max = 5 * np.ceil((y_max + 3) / 5)
+                    graph_min = 5 * np.floor(min(55, max(30, graph_max - y_min)) / 5)
+                    self.ax.set_ylim((graph_min, graph_max))
 
             elif self.y_limits_policy["name"] == "impedance":
                 y_arrays = [line.get_ydata() for line in self.ax.get_lines()]
                 if y_arrays:
                     y_max = max([max(arr) for arr in y_arrays])
-                    graph_max = 5 * np.ceil((y_max + 1) / 5)
+                    graph_max = 5 * np.ceil((y_max + 2) / 5)
                     self.ax.set_ylim((0, graph_max))
-            
+
             elif self.y_limits_policy["name"] == "phase":
                 y_min_max = (-180, 180)
                 self.ax.set_yticks(range(-180, 180+1, 90))
