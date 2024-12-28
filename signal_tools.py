@@ -704,28 +704,37 @@ def check_if_sorted_and_valid(frequencies: tuple):
 def discover_fs_from_time_signature(curve):
     if not any(["[ms]" in string for string in curve.klippel_attrs["unresolved_parts"]]):
         raise TypeError("x array unit is not ms. Cannot process.")
-    pos_0ms = np.where(curve.get_xy[0] == 0)
-    pos_100ms = np.where(curve.get_xy[0] == 100)
-    if any([len(array) != 1 for array in (pos_0ms, pos_100ms)]):
-        raise ValueError("x array does not seem to be linear.")
-    return int((pos_100ms[0] - pos_0ms[0]) * 10)
+    x = curve.get_xy[0]
+    return discover_fs_from_time_signal(x)
 
 
-def check_power_over_time(y, FS, window_duration:int=200, step_duration:int=50):
+def discover_fs_from_time_signal(x):
+    if x[-1] / len(x) > 1e-5:
+        my_x = np.array(x) / 1000  # unit was in ms
+    else:
+        my_x = np.array(x)  # unit was in s
+    
+    if is_linearly_spaced(x) is False:
+        raise ValueError("Time signal is not linearly spaced.")
+
+    return int( (len(x) - 1) / (my_x[-1] - my_x[0]) )
+
+
+def check_level_over_time(y, FS, window_duration:int=200, step_duration:int=50):
     "Assume a minimum frequency of 10Hz. To cover 10Hz at least 2 times, window length is chosen as 200ms"
     "window and step durations are both in ms"
     win = sig.windows.hamming(int(FS * window_duration / 1000))
     target_hop = FS * step_duration / 1000
     n_evaluations = int((len(y) - len(win)) / target_hop + 1)
     hop = int((len(y) - len(win)) / n_evaluations)
-    Py = []
+    Ay = []
     i_start, i_end = 0, len(win)
     while i_end <= len(y):  # not the best Python code
-        power = ac.signal.rms(y[i_start:i_end])
-        Py.append(power)
+        val = ac.signal.rms(y[i_start:i_end])
+        Ay.append(val)
         i_start += hop
         i_end += hop
-    return Py
+    return Ay
 
 
 def convolve_with_signal(ir, my_sig, ir_FS=None, my_sig_FS=None, trim_zeros=True):
