@@ -629,6 +629,8 @@ class Curve:
 def is_logarithmically_spaced(arr: tuple, rtol=1e-02) -> bool:
     """
     Checks if a given array is logarithmically spaced.
+    Each value in array is divided by the next and it is verified that all the ratios
+    are close to each other using: absolute(a - b) <= rtol * absolute(b)
 
     Parameters:
     arr (list or np.ndarray): The array of numbers to check.
@@ -651,7 +653,7 @@ def is_logarithmically_spaced(arr: tuple, rtol=1e-02) -> bool:
     ratios = arr[1:] / arr[:-1]
     
     # Check if all ratios are approximately equal (tolerance for floating-point errors)
-    return np.allclose(ratios, ratios[0], rtol)
+    return np.allclose(ratios, np.median(ratios), rtol=rtol)
 
 
 @lru_cache
