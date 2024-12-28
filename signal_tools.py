@@ -657,6 +657,33 @@ def is_logarithmically_spaced(arr: tuple, rtol=1e-02) -> bool:
 
 
 @lru_cache
+def is_linearly_spaced(arr: tuple, rtol=1e-02) -> bool:
+    """
+    Checks if a given array is linearly spaced.
+    Each value in array is subtracted from the next and it is verified that all the
+    results are close to each other using: absolute(a - b) <= rtol * absolute(b)
+
+    Parameters:
+    arr (list or np.ndarray): The array of numbers to check.
+
+    Returns:
+    bool: True if the array is linearly spaced, False otherwise.
+    """
+    if len(arr) < 2:
+        # An array with fewer than 2 elements cannot determine spacing
+        return False
+    
+    # Convert to a NumPy array for easier calculations
+    arr = np.array(arr, dtype=float)
+    
+    # Compute the differences of consecutive elements
+    diffs = arr[1:] - arr[:-1]
+    
+    # Check if all differences are approximately equal (tolerance for floating-point errors)
+    return np.allclose(diffs, np.median(diffs), rtol=rtol)
+
+
+@lru_cache
 def check_if_sorted_and_valid(frequencies: tuple):
     array = np.array(frequencies, dtype=float)
 
