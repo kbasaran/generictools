@@ -180,7 +180,7 @@ class ChoiceButtonGroup(qtw.QWidget):
         user_data_widgets[self._name] = self.button_group
 
     def buttons(self) -> list:
-        return self.self.button_group.buttons()
+        return self.button_group.buttons()
 
 
 class ComboBox(qtw.QComboBox):
