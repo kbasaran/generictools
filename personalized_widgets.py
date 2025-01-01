@@ -309,14 +309,16 @@ class UserForm(qtw.QWidget):
             return
 
         if isinstance(obj, qtw.QComboBox):
-            obj_value = {"items": [], "current_index": 0}
+            obj_value = dict()
+            obj_value["current_index"] = obj.currentIndex()
+            obj_value["current_data"] = obj.currentData()
+            obj_value["current_text"] = obj.currentText()
+
+            obj_value["items"] = list()
             for i_item in range(obj.count()):
                 item_text = obj.itemText(i_item)
                 item_data = obj.itemData(i_item)
                 obj_value["items"].append((item_text, item_data))
-            obj_value["current_index"] = obj.currentIndex()
-            obj_value["current_data"] = obj.currentData()
-            obj_value["current_text"] = obj.currentText()
 
         elif isinstance(obj, qtw.QLineEdit):
             obj_value = obj.text()
