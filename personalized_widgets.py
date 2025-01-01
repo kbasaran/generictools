@@ -242,7 +242,7 @@ class UserForm(qtw.QWidget):
                 assert isinstance(value_new, dict)
                 existing_item_index = obj.findText(value_new["current_text"])
                 if existing_item_index == -1:
-                    # the combobox does not have this stored option
+                    # the combobox does not yet have this stored option
                     # clear the combobox
                     obj.clear()
                     # add all options from storage
