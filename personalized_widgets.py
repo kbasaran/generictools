@@ -241,8 +241,8 @@ class UserForm(qtw.QWidget):
             if isinstance(obj, qtw.QComboBox):
                 assert isinstance(value_new, dict)
                 existing_item_index = obj.findText(value_new["current_text"])
-                if existing_item_index == -1:
-                    # the combobox does not yet have this stored option
+                if existing_item_index == -1:  # the combobox does not yet have this stored option
+                    
                     # clear the combobox
                     obj.clear()
                     # add all options from storage
@@ -399,7 +399,7 @@ class SoundEngine(qtc.QObject):
         self.stream.stop(ignore_errors=True)
 
 class ResultTextBox(qtw.QDialog):
-    def __init__(self, title, result_text, monospace=True, parent=None):
+    def __init__(self, title, result_text, monospace=True, parent=None, markdown=False):
         super().__init__(parent=parent)
         # self.setWindowModality(qtc.Qt.WindowModality.NonModal)
 
@@ -408,13 +408,17 @@ class ResultTextBox(qtw.QDialog):
         self.setMinimumSize(700, 480)
         text_box = qtw.QTextEdit()
         text_box.setReadOnly(True)
-        text_box.setText(result_text)
-
-        if monospace:
-            family = "Monospace" if "Monospace" in qtg.QFontDatabase.families() else "Consolas"
-            font = text_box.font()
-            font.setFamily(family)
-            text_box.setFont(font)
+        if markdown is False:
+            text_box.setText(result_text)
+            if monospace:
+                family = "Monospace" if "Monospace" in qtg.QFontDatabase.families() else "Consolas"
+                font = text_box.font()
+                font.setFamily(family)
+                text_box.setFont(font)
+        else:
+            text_box.setMarkdown(result_text)
+            if monospace is True:
+                logging.warning("Ignoring monospace argument when using Markdown.")
 
         layout.addWidget(text_box)
 
