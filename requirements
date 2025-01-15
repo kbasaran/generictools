@@ -1,0 +1,6 @@
+PySide6
+soundfile
+sounddevice
+matplotlib == 3.9.4
+scipy
+acoustics >= 0.2.6
