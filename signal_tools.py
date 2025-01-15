@@ -870,7 +870,7 @@ def smooth_curve_butterworth(x, y, bandwidth=3, order=8, ndarray=False, FS=None)
             sos = sig.butter(order, f_critical, btype="bandpass", output="sos", fs=FS)
             _, filtering_array = sig.sosfreqz(sos, x, fs=FS)
             filtering_array_abs = np.abs(filtering_array)
-            filtered_array_of_power = 10**(y/10) * filtering_array_abs / np.sum(filtering_array_abs)
+            filtered_array_of_power = 10**(np.array(y) / 10) * filtering_array_abs / np.sum(filtering_array_abs)
             # in above line instead of the division by the sum, division by "resolution * bandwidth"
             # should also have worked but has some offset in it..
             y_filt[i] = 10 * np.log10(np.sum(filtered_array_of_power))
