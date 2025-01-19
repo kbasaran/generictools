@@ -11,8 +11,8 @@ from matplotlib.backends.backend_qtagg import (
     FigureCanvas, NavigationToolbar2QT as NavigationToolbar)
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
-plt.rcParams["figure.constrained_layout.h_pad"] = 0.3
-plt.rcParams["figure.constrained_layout.w_pad"] = 0.4
+# plt.rcParams["figure.constrained_layout.h_pad"] = 0.3
+# plt.rcParams["figure.constrained_layout.w_pad"] = 0.4
 # https://matplotlib.org/stable/gallery/user_interfaces/embedding_in_qt_sgskip.html
 
 import logging
