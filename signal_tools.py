@@ -1053,7 +1053,7 @@ def calculate_graph_limits(y_arrays, multiple=5, clearance_up_down=(2, 1)) -> tu
 def third_octave_power(sig, FS, center_frequencies):
     return tuple(10**(ac.signal.third_octaves(sig, FS, frequencies=center_frequencies)[1] / 10))
 
-def calculate_3rd_octave_bands(time_sig: np.array, FS: int) -> tuple:
+def calculate_3rd_octave_bands(time_sig: np.array, FS: int, multiprocess=True) -> tuple:
     start_time = time.perf_counter()
     center_frequencies = ac.standards.iec_61260_1_2014.NOMINAL_THIRD_OCTAVE_CENTER_FREQUENCIES
 
@@ -1062,8 +1062,12 @@ def calculate_3rd_octave_bands(time_sig: np.array, FS: int) -> tuple:
     arrays = np.array_split(time_sig, n_arrays)
     third_oct_pows_array = np.empty((n_arrays, len(center_frequencies)))
     
-    with multiprocessing.Pool(processes=None) as p:  # None means use as many processes as cpu count
-        third_oct_pows = p.starmap(third_octave_power, [(array, FS, center_frequencies) for array in arrays])
+    if multiprocess:       
+        with multiprocessing.Pool(processes=None) as p:  # None means use as many processes as cpu count
+            third_oct_pows = p.starmap(third_octave_power, [(array, FS, center_frequencies) for array in arrays])
+    else:
+        third_oct_pows = [third_octave_power(array, FS, center_frequencies) for array in arrays]
+
     for i, array in enumerate(arrays):
         third_oct_pows_array[i, :] = third_oct_pows[i]
 
