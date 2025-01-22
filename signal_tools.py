@@ -983,6 +983,30 @@ def mean_and_median_of_curves(curves_xy: list):
     return Curve((curves_xy[0][0], y_mean)), Curve((curves_xy[0][0], y_median))
 
 
+def curve_summation(curves_xy: list) -> Curve:
+    all_x_values = sorted(list(set(tuple(curves_xy[0].get_x()) + tuple(curves_xy[1].get_x()))))
+    y0_interp = intp.interp1d(curves_xy[0].get_x(), curves_xy[0].get_y(), assume_sorted=True, bounds_error=False)
+    y1_interp = intp.interp1d(curves_xy[1].get_x(), curves_xy[1].get_y(), assume_sorted=True, bounds_error=False)
+    
+    y0 = y0_interp(all_x_values)
+    y1 = y1_interp(all_x_values)
+    
+    # Sum
+    xy_sum = np.array([all_x_values, y0 + y1]).T
+    xy_sum = xy_sum[~np.isnan(xy_sum).any(axis=1)]
+    
+    # Difference
+    xy_diff = np.array([all_x_values, y0 - y1]).T
+    xy_diff = xy_diff[~np.isnan(xy_diff).any(axis=1)]
+    if np.mean(xy_diff) < 0:
+        xy_diff[:, 1] = xy_diff[:, 1] * -1
+
+    return (
+        Curve(xy_sum),
+        Curve(xy_diff),
+        )
+
+
 def iqr_analysis(curves_xy: dict, outlier_fence_iqr):
     if not arrays_are_equal([x for x, y in curves_xy.values()]):
         raise NotImplementedError("Curves do not have the exact same frequency points."
