@@ -1007,6 +1007,25 @@ def curve_summation(curves_xy: list) -> Curve:
         )
 
 
+def calculate_average(curve: Curve, f_min, f_max) -> float:
+    xy = curve.get_xy(ndarray=True)
+
+    if f_min < xy[0][0]:
+        raise ValueError(f"Minimum frequency for average calculation is out of bounds for curve '{curve.get_full_name()}'.")
+    if f_max > xy[0][-1]:
+        raise ValueError(f"Maximum frequency for average calculation is out of bounds for curve '{curve.get_full_name()}'.")
+        
+    y_interp = intp.interp1d(curve.get_x(), curve.get_y(), assume_sorted=True)    
+    edge_values = np.array([[f_min, f_max],
+                            [y_interp(f_min), y_interp(f_max)],
+                            ])
+
+    xy = xy[:, (xy[0, :] > f_min) & (xy[0, :] < f_max)]
+    xy = np.hstack((edge_values[:, 0:1], xy, edge_values[:, 1:2]))  # add f_min and f_max value
+
+    return np.trapezoid(xy[1], x=xy[0]) / (f_max - f_min)
+
+
 def iqr_analysis(curves_xy: dict, outlier_fence_iqr):
     if not arrays_are_equal([x for x, y in curves_xy.values()]):
         raise NotImplementedError("Curves do not have the exact same frequency points."
