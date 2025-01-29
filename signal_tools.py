@@ -508,7 +508,7 @@ class Curve:
             self._check_if_sorted_and_valid(tuple(xy[0]))
             setattr(self, "_x", np.array(xy[0]))
             setattr(self, "_y", np.array(xy[1]))
-            setattr(self, "_xy", np.row_stack([self._x, self._y]))
+            setattr(self, "_xy", np.vstack([self._x, self._y]))
 
         elif isinstance(xy, str):  # only works with frequencies in index (shape=(*, 2))
             i_start, i_stop = 0, 0
@@ -547,7 +547,7 @@ class Curve:
                 self._check_if_sorted_and_valid(x)
                 setattr(self, "_x", np.array(x))
                 setattr(self, "_y", np.array(y))
-                setattr(self, "_xy", np.row_stack([self._x, self._y]))
+                setattr(self, "_xy", np.vstack([self._x, self._y]))
 
             else:
                 ValueError("xy input unrecognized")
