@@ -13,11 +13,11 @@ layout.addWidget(label)
 mw.setLayout(layout)
 
 
-app_definitions = {"app_name": "Test Signal Maker",
-                   "version": "0.2.3",
+app_definitions = {"app_name": "Linecraft",
+                   "version": "0.2.4rc",
                    # "version": "Test build " + today.strftime("%Y.%m.%d"),
-                   "description": "Test Signal Maker - Loudspeaker test signal tool",
-                   "copyright": "Copyright (C) 2024 Kerem Basaran",
+                   "description": "Linecraft - Frequency response plotting and statistics",
+                   "copyright": "Copyright (C) 2025 Kerem Basaran",
                    "icon_path": str(Path("./logo/icon.ico")),
                    "author": "Kerem Basaran",
                    "author_short": "kbasaran",
