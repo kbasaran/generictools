@@ -230,7 +230,7 @@ class UserForm(qtw.QWidget):
     def update_form_values(self, values_new: dict):
         # Update the widget values from a dictionary
 
-        # list to store widgets that did not receive a new value with "values_new"
+        # list of widgets that are not mentioned in argument values_new
         no_dict_key_for_widget = set(
             [key for key, obj in self.interactable_widgets.items() if not isinstance(obj, qtw.QAbstractButton)]
             )  # works???????????????????????
@@ -241,6 +241,11 @@ class UserForm(qtw.QWidget):
             if isinstance(obj, qtw.QComboBox):
                 assert isinstance(value_new, dict)
                 existing_item_index = obj.findText(value_new["current_text"])
+
+                logger.debug(existing_item_index)
+                logger.debug("value_new: ", value_new)
+                logger.debug([(obj.itemText(i), obj.itemData(i)) for i in range(obj.count())])
+
                 if existing_item_index == -1:  # the combobox does not yet have this stored option
                     
                     # clear the combobox
@@ -248,30 +253,29 @@ class UserForm(qtw.QWidget):
                     # add all options from storage
                     items = value_new.get("items", [])
                     current_text = value_new["current_text"]
-                    current_data = value_new["current_data"]
+                    current_data = value_new.get("current_data", None)
 
                     # if items are available in loaded values
                     if items:
                         for item in items:
                             obj.addItem(*item)
 
-                        if "current_index" not in value_new.keys():
-                            # to cover cases where index was not stored. for backwards compatibility.
-                            obj.setCurrentText(current_text)
-                        else:
-                            obj.setCurrentIndex(value_new["current_index"])
+                        # if "current_index" not in value_new.keys():
+                        #     # to cover cases where index was not stored. for backwards compatibility.
+                        obj.setCurrentText(current_text)
+                        # else:
+                        #     obj.setCurrentIndex(value_new["current_index"])
 
                     # otherwise add only the item of last selection
                     else:
                         obj.addItem(current_text, current_data)
                         obj.setCurrentIndex(0)
 
-                else:
-                    # the combobox already has the right item options
+                else:  # the combobox already has this name as an item
                     # we just set to the correct one
                     obj.setCurrentIndex(existing_item_index)
                     # also set its data again just in case
-                    obj.setItemData(existing_item_index, value_new["current_data"])
+                    obj.setItemData(existing_item_index, value_new.get("current_data", None))
 
             elif isinstance(obj, qtw.QLineEdit):
                 assert isinstance(value_new, str)
@@ -318,7 +322,7 @@ class UserForm(qtw.QWidget):
             for i_item in range(obj.count()):
                 item_text = obj.itemText(i_item)
                 item_data = obj.itemData(i_item)
-                obj_value["items"].append((item_text, item_data))
+                obj_value["items"].append((item_text, item_data))  # index 0 is name, 1 is data
 
         elif isinstance(obj, qtw.QLineEdit):
             obj_value = obj.text()
@@ -336,7 +340,6 @@ class UserForm(qtw.QWidget):
                 obj_value = obj.value()
 
         return obj_value
-
 
     def get_form_values(self) -> dict:
         """Collects all values from the widgets in the form that have user input values.
