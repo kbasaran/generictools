@@ -1026,29 +1026,36 @@ def calculate_average(curve: Curve, f_min, f_max) -> float:
     return np.trapezoid(xy[1], x=xy[0]) / (f_max - f_min)
 
 
-def iqr_analysis(curves_xy: dict, outlier_fence_iqr):
+def iqr_analysis(curves_xy: dict, outlier_fence_iqr, f_min=0, f_max=np.inf):
     if not arrays_are_equal([x for x, y in curves_xy.values()]):
         raise NotImplementedError("Curves do not have the exact same frequency points."
                                   "\nConsider interpolating to a common frequency array first.")
-    x_array = list(curves_xy.values())[0][0]
-    y_arrays = np.column_stack([y for x, y in curves_xy.values()])
+
+    x_array_no_filt = list(curves_xy.values())[0][0]  # first curve, first element of tuple
+    y_arrays_no_filt = np.column_stack([y for x, y in curves_xy.values()])
+
+    # filter by frequency
+    mask_rows = (x_array_no_filt > f_min) & (x_array_no_filt < f_max)
+    x_array = x_array_no_filt[mask_rows]
+    y_arrays = y_arrays_no_filt[mask_rows, :]
+    
 
     q1, median, q3 = np.percentile(y_arrays, (25, 50, 75), axis=1, method='median_unbiased')
     iqr = q3 - q1
     lower_fence = q1 - iqr * outlier_fence_iqr
     upper_fence = q3 + iqr * outlier_fence_iqr
 
-    outlier_down = np.any(y_arrays < lower_fence.reshape((-1, 1)), axis=0)
-    outlier_up = np.any(y_arrays > upper_fence.reshape((-1, 1)), axis=0)
-    outliers_all = outlier_up | outlier_down
+    outliers_down = np.any(y_arrays < lower_fence.reshape((-1, 1)), axis=0)
+    outliers_up = np.any(y_arrays > upper_fence.reshape((-1, 1)), axis=0)
+    outliers_all = outliers_up | outliers_down
 
-    outlier_indexes = list(np.array(list(curves_xy.keys()), dtype=int)[outliers_all])
+    outliers_indexes = list(np.array(list(curves_xy.keys()), dtype=int)[outliers_all])
 
     return (
         Curve((x_array, median)),
         Curve((x_array, lower_fence)),
         Curve((x_array, upper_fence)),
-        outlier_indexes
+        outliers_indexes
         )
 
 
