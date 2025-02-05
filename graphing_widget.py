@@ -81,9 +81,9 @@ class MatplotlibWidget(qtw.QWidget):
             self.ax.grid(visible=visible, which=which, axis=axis)
 
         else:
-            if "major" in self.app_settings.graph_grids:
+            if "ajor" in self.app_settings.graph_grids:
                 self.ax.grid(visible=True, which="major", axis='both')
-            if "minor" in self.app_settings.graph_grids:
+            if "inor" in self.app_settings.graph_grids:
                 self.ax.grid(visible=True, which="minor", axis='both')
     
     def set_y_limits_policy(self, policy_name, **kwargs):
