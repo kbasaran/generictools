@@ -240,9 +240,9 @@ class TestSignal():
         Better only pass a dictionary.
         """
         for filter in kwargs.get("filters"):
-            filt_type = filter["type"].currentText()
-            frequency = filter["frequency"].value()
-            order = filter["order"].currentData()
+            filt_type = filter["type"]
+            frequency = filter["frequency"]
+            order = filter["order"]
             if filt_type == "HP":
                 self.time_sig = ac.signal.highpass(self.time_sig, frequency,
                                                    self.FS, order, zero_phase=False)
