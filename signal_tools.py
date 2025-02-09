@@ -177,6 +177,20 @@ class TestSignal():
             self.analysis += ("\n\nSignal includes fade in/out of "
                               + self.applied_fade_in_duration + "."
                               )
+    
+    def spectrum_analysis(self):
+        # Power spectrum of signal
+        FS = self.FS
+        PowerSpect = sig.welch(self.time_sig.astype("float32"),
+                                  fs=FS,
+                                  nperseg=FS/4,  # defines also window size
+                                  window="hann",
+                                  scaling="spectrum")
+        
+        power_spectrum = (PowerSpect[0], 10*np.log10(PowerSpect[1]))
+        octave_bands = calculate_3rd_octave_bands(self.time_sig, FS, multiprocess=True)
+        
+        return power_spectrum, octave_bands
             
     def apply_resampling(self, new_sample_rate):
         if new_sample_rate < self.FS:
