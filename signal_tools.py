@@ -188,7 +188,13 @@ class TestSignal():
                                   scaling="spectrum")
         
         power_spectrum = (PowerSpect[0], 10*np.log10(PowerSpect[1]))
-        octave_bands = calculate_3rd_octave_bands(self.time_sig, FS, multiprocess=True)
+
+        if os.name == "posix":
+            use_multiprocess = True  # tried in Linux, runs perfectly.
+        else:
+            use_multiprocess = False  # buggy in windows. requires multiprocess.freeze_support() also.
+
+        octave_bands = calculate_3rd_octave_bands(self.time_sig, FS, multiprocess=use_multiprocess)
         
         return power_spectrum, octave_bands
             
