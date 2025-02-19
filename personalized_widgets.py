@@ -274,8 +274,8 @@ class UserForm(qtw.QWidget):
                 else:  # the combobox already has this name as an item
                     # we just set to the correct one
                     obj.setCurrentIndex(existing_item_index)
-                    # also set its data again just in case
-                    obj.setItemData(existing_item_index, value_new.get("current_data", None))
+                    # # also set its data again just in case
+                    # obj.setItemData(existing_item_index, value_new.get("current_data", None))
 
             elif isinstance(obj, qtw.QLineEdit):
                 assert isinstance(value_new, str)
