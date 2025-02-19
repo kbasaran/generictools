@@ -1027,7 +1027,7 @@ def curve_summation(curves_xy: list) -> Curve:
         )
 
 
-def calculate_average(curve: Curve, f_min, f_max) -> float:
+def calculate_average(curve: Curve, f_min: float, f_max: float, logarithmic: bool) -> float:
     xy = curve.get_xy(ndarray=True)
 
     if f_min < xy[0][0]:
@@ -1035,15 +1035,26 @@ def calculate_average(curve: Curve, f_min, f_max) -> float:
     if f_max > xy[0][-1]:
         raise ValueError(f"Maximum frequency for average calculation is out of bounds for curve '{curve.get_full_name()}'.")
         
-    y_interp = intp.interp1d(curve.get_x(), curve.get_y(), assume_sorted=True)    
-    edge_values = np.array([[f_min, f_max],
-                            [y_interp(f_min), y_interp(f_max)],
-                            ])
+    if logarithmic:
+        f_norm_min = np.log(f_min)
+        f_norm_max = np.log(f_max)
+        x_norm = np.log(curve.get_x())
+    else:
+        f_norm_min = f_min
+        f_norm_max = f_max
+        x_norm = curve.get_x()
+        
+    y = curve.get_y()
+    y_interp = intp.interp1d(x_norm, y, assume_sorted=True)
 
-    xy = xy[:, (xy[0, :] > f_min) & (xy[0, :] < f_max)]
-    xy = np.hstack((edge_values[:, 0:1], xy, edge_values[:, 1:2]))  # add f_min and f_max value
-
-    return np.trapezoid(xy[1], x=xy[0]) / (f_max - f_min)
+    edge_norm_values = np.array([[f_norm_min, f_norm_max],
+                                [y_interp(f_norm_min), y_interp(f_norm_max)],
+                                ])
+    xy_norm = np.vstack([x_norm, y])
+    xy_norm_reduced = xy_norm[:, (xy_norm[0, :] > f_norm_min) & (xy_norm[0, :] < f_norm_max)]
+    xy_norm = np.hstack((edge_norm_values[:, 0:1], xy_norm_reduced, edge_norm_values[:, 1:2]))  # add f_norm_min and f_norm_max value
+    
+    return np.trapezoid(xy_norm[1], x=xy_norm[0]) / (f_norm_max - f_norm_min)
 
 
 def iqr_analysis(curves_xy: dict, outlier_fence_iqr, f_min=0, f_max=np.inf):

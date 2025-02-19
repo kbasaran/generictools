@@ -242,9 +242,9 @@ class UserForm(qtw.QWidget):
                 assert isinstance(value_new, dict)
                 existing_item_index = obj.findText(value_new["current_text"])
 
-                logger.debug(existing_item_index)
-                logger.debug("value_new: ", value_new)
-                logger.debug([(obj.itemText(i), obj.itemData(i)) for i in range(obj.count())])
+                logger.debug("Items in widget: " + str([(obj.itemText(i), obj.itemData(i)) for i in range(obj.count())]))
+                logger.debug("New text: " + str(value_new))
+                logger.debug("Found in index: " + str(existing_item_index))
 
                 if existing_item_index == -1:  # the combobox does not yet have this stored option
                     
@@ -274,8 +274,8 @@ class UserForm(qtw.QWidget):
                 else:  # the combobox already has this name as an item
                     # we just set to the correct one
                     obj.setCurrentIndex(existing_item_index)
-                    # also set its data again just in case
-                    obj.setItemData(existing_item_index, value_new.get("current_data", None))
+                    # # also set its data again just in case
+                    # obj.setItemData(existing_item_index, value_new.get("current_data", None))
 
             elif isinstance(obj, qtw.QLineEdit):
                 assert isinstance(value_new, str)
