@@ -1027,7 +1027,7 @@ def curve_summation(curves_xy: list) -> Curve:
         )
 
 
-def calculate_average(curve: Curve, f_min, f_max, logarithmic=True) -> float:
+def calculate_average(curve: Curve, f_min: float, f_max: float, logarithmic: bool) -> float:
     xy = curve.get_xy(ndarray=True)
 
     if f_min < xy[0][0]:
