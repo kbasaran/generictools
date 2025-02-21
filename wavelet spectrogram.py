@@ -42,40 +42,42 @@ BW = 1/12
 C = 1
 B = 4 / (C * BW)**2
 
-wavelets = [f"cmor{b:.1f}-{c:.1f}"
-            for b in [2, 4, 8, 16]
-            for c in [0.5, 1, 1.5, 2]
-            ]
-results = dict()
-for wavelet in wavelets:
+# wavelets = [f"cmor{b:.1f}-{c:.1f}"
+#             for b in [2, 4, 8, 16]
+#             for c in [0.5, 1, 1.5, 2]
+#             ]
 
-    # ---- wavelet calculation
-    # wavelet = f"cmor{B:.1f}-{C:.1f}"
-    sampling_period = np.median(np.diff(x))  # seconds
-    FS = int(round(1 / sampling_period))
-    
-    frequencies = signal_tools.generate_log_spaced_freq_list(20, 10000, 1/BW)
-    # normalized to sampling freq. 1 is nyquist.
-    scales = pywt.frequency2scale(wavelet, frequencies / FS)
-    
-    start_time = time.perf_counter()
-    cwtmatr, freqs = pywt.cwt(
-        y, scales, wavelet, sampling_period=sampling_period)
-    # absolute take absolute value of complex result
-    cwtmatr = np.abs(cwtmatr[:-1, :-1])
-    print(f"{wavelet} calculated in"
-          f"{ (time.perf_counter() - start_time) / 60:.2g} minutes."
-          )
-    results[wavelet] = cwtmatr
-    
-    # ---- plot result using matplotlib's pcolormesh (image with annoted axes)
-    fig, ax = plt.subplots()
-    pcm = ax.pcolormesh(x, freqs, cwtmatr, edgecolors=None)
-    plt.minorticks_on()
-    plt.grid(which="minor", axis="both", color="w", alpha=0.07)
-    ax.set_yscale("log")
-    ax.set_xlabel("Time (s)")
-    ax.set_ylabel("Frequency (Hz)")
-    ax.set_title(f"Continuous Wavelet Transform (Scaleogram)\n{wavelet}")
-    fig.colorbar(pcm, ax=ax)
-    plt.show()
+# ---- wavelet calculation
+wavelet = f"cmor{B:.1f}-{C:.1f}"
+sampling_period = np.median(np.diff(x))  # seconds
+FS = int(round(1 / sampling_period))
+
+frequencies = signal_tools.generate_log_spaced_freq_list(10, FS/3, 1/BW)
+# normalized to sampling freq. 1 is nyquist.
+scales = pywt.frequency2scale(wavelet, frequencies / FS)
+
+start_time = time.perf_counter()
+cwtmatr, freqs = pywt.cwt(
+    y, scales, wavelet, sampling_period=sampling_period)
+# absolute take absolute value of complex result
+cwtmatr = np.abs(cwtmatr[:-1, :-1])
+print(f"{wavelet} calculated in"
+      f" { (time.perf_counter() - start_time) / 60:.2g} minutes."
+      )
+
+# ---- plot result using matplotlib's pcolormesh (image with annoted axes)
+fig, ax = plt.subplots()
+pcm = ax.pcolormesh(x,
+                    freqs,
+                    cwtmatr,
+                    vmin=np.max(cwtmatr) / 1e3,
+                    vmax=np.max(cwtmatr),
+                    edgecolors=None)
+plt.minorticks_on()
+plt.grid(which="minor", axis="both", color="k", alpha=0.1)
+ax.set_yscale("log")
+ax.set_xlabel("Time (s)")
+ax.set_ylabel("Frequency (Hz)")
+ax.set_title(f"Continuous Wavelet Transform (Scaleogram)\n{wavelet}, {1/BW:.2g} ppo")
+fig.colorbar(pcm, ax=ax)
+plt.show()
