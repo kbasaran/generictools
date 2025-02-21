@@ -38,9 +38,9 @@ xy = parse_curve_copied_from_Klippel(curve_copied_from_Klippel)
 x = xy[:, 0] / 1000  # change ms to seconds
 y = xy[:, 1]
 
-BW = 1/24
-# B = 4
-# C = 1
+BW = 1/12
+C = 1
+B = 4 / (C * BW)**2
 
 wavelets = [f"cmor{b:.1f}-{c:.1f}"
             for b in [2, 4, 8, 16]
