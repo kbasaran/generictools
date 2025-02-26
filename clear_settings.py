@@ -25,7 +25,13 @@ app_definitions = {"app_name": "Linecraft",
                    "website": "https://github.com/kbasaran",
                    }
 
-settings_storage_title = app_definitions["app_name"] + " - " + (app_definitions["version"].split(".")[0] if "." in app_definitions["version"] else "")
+settings_storage_title = (app_definitions["app_name"]
+                          + " v"
+                          + (".".join(app_definitions["version"].split(".")[:2])
+                             if "." in app_definitions["version"]
+                             else "???"
+                             )
+                          )
 
 settings = qtc.QSettings(app_definitions["author_short"], settings_storage_title)
 
