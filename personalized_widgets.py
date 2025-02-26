@@ -232,7 +232,9 @@ class UserForm(qtw.QWidget):
 
         # list of widgets that are not mentioned in argument values_new
         no_dict_key_for_widget = set(
-            [key for key, obj in self.interactable_widgets.items() if not isinstance(obj, qtw.QAbstractButton)]
+            [key for key, obj in self.interactable_widgets.items()
+             if (not isinstance(obj, qtw.QAbstractButton) or isinstance(obj, qtw.QCheckBox))
+             ]
             )  # works???????????????????????
         no_widget_for_dict_key = set()
         for key, value_new in values_new.items():
@@ -289,10 +291,12 @@ class UserForm(qtw.QWidget):
 
             elif isinstance(obj, qtw.QButtonGroup):
                 obj.button(value_new).setChecked(True)
-
-            elif isinstance(obj, qtw.QCheckBox):
-                assert isinstance(value_new, bool)
-                obj.setChecked(value_new)
+            
+            elif isinstance(obj, qtw.QAbstractButton):            
+                if isinstance(obj, qtw.QCheckBox):
+                    obj.setChecked(value_new)
+                elif not isinstance(value_new, None):
+                    raise ValueError(f"Only a 'None' value is accepted to set state of type button '{type(obj)}'.")
 
             elif type(value_new) in [int, float]:
                 obj.setValue(value_new / obj.coeff_for_SI)
@@ -334,7 +338,7 @@ class UserForm(qtw.QWidget):
             if isinstance(obj, qtw.QCheckBox):
                 obj_value = obj.isChecked()
             else:
-                return
+                obj_value = None
 
         else:
             if obj.coeff_for_SI:
@@ -352,11 +356,7 @@ class UserForm(qtw.QWidget):
         """
         values = {}
         for key in self.interactable_widgets.keys():
-
             obj_value = self.get_value(key)
-            if obj_value is None:
-                raise ValueError(f"Received data with type 'None' from object '{key}' in form.")
-            
             values[key] = obj_value
 
         return values
