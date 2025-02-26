@@ -312,9 +312,6 @@ class UserForm(qtw.QWidget):
         if obj is None:
             raise ValueError(f"Object with name '{name}' not found.")
 
-        if isinstance(obj, qtw.QAbstractButton):
-            return
-
         if isinstance(obj, qtw.QComboBox):
             obj_value = dict()
             obj_value["current_index"] = obj.currentIndex()
@@ -333,8 +330,11 @@ class UserForm(qtw.QWidget):
         elif isinstance(obj, qtw.QButtonGroup):
             obj_value = obj.checkedId()
 
-        elif isinstance(obj, qtw.QCheckBox):
-            obj_value = obj.isChecked()
+        elif isinstance(obj, qtw.QAbstractButton):            
+            if isinstance(obj, qtw.QCheckBox):
+                obj_value = obj.isChecked()
+            else:
+                return
 
         else:
             if obj.coeff_for_SI:
