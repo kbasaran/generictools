@@ -349,12 +349,10 @@ class UserForm(qtw.QWidget):
         for key in self.interactable_widgets.keys():
 
             obj_value = self.get_value(key)
-            if obj_value is not None:
-                values[key] = obj_value
-
-        logger.debug("Return of 'get_form_values")
-        for val, key in values.items():
-            logger.debug((val, type(val), key, type(key)))
+            if obj_value is None:
+                raise ValueError(f"Received data with type 'None' from object '{key}' in form.")
+            
+            values[key] = obj_value
 
         return values
 
