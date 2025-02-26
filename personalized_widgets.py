@@ -236,15 +236,17 @@ class UserForm(qtw.QWidget):
             )  # works???????????????????????
         no_widget_for_dict_key = set()
         for key, value_new in values_new.items():
+            logger.debug(f"Updating '{key}' with '{value_new}'/{type(value_new)}")
             obj = self.interactable_widgets[key]
 
             if isinstance(obj, qtw.QComboBox):
                 assert isinstance(value_new, dict)
                 existing_item_index = obj.findText(value_new["current_text"])
 
-                logger.debug("Items in widget: " + str([(obj.itemText(i), obj.itemData(i)) for i in range(obj.count())]))
-                logger.debug("New text: " + str(value_new))
-                logger.debug("Found in index: " + str(existing_item_index))
+                logger.debug("Items in widget: " + str([(obj.itemText(i), obj.itemData(i)) for i in range(obj.count())])
+                             + "\nNew text: " + str(value_new)
+                             + "\nFound in index: " + str(existing_item_index)
+                             )
 
                 if existing_item_index == -1:  # the combobox does not yet have this stored option
                     
@@ -289,6 +291,7 @@ class UserForm(qtw.QWidget):
                 obj.button(value_new).setChecked(True)
 
             elif isinstance(obj, qtw.QCheckBox):
+                assert isinstance(value_new, bool)
                 obj.setChecked(value_new)
 
             elif type(value_new) in [int, float]:
@@ -338,6 +341,8 @@ class UserForm(qtw.QWidget):
                 obj_value = obj.value() * obj.coeff_for_SI
             else:
                 obj_value = obj.value()
+        
+        logger.debug(f"Gotten value '{obj_value}'/{type(obj_value)} for object '{name}'.")
 
         return obj_value
 
