@@ -109,7 +109,7 @@ class MatplotlibWidget(qtw.QWidget):
                 zorder_offset = -1_000_000 if line.get_label()[0] == "_" else 0
                 line.set_zorder(n_lines - i + zorder_offset)
 
-            if self.ax.has_data() and self.app_settings.show_legend:
+            if self.ax.has_data() and getattr(self.app_settings, "show_legend", True):
               # print("Updating legend.")
               self._create_ordered_legend()
               # self.ax.draw_artist(legend)
