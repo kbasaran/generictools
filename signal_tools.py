@@ -653,7 +653,7 @@ class Curve:
         if prefix := self._identification.get("prefix"):
             return joiner.join((prefix, base_name_and_suffixes))
         else:
-            raise ValueError("Prefix was not defined")
+            return base_name_and_suffixes
 
     def set_visible(self, val):
         assert isinstance(val, bool)
