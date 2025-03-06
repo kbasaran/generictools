@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import pandas as pd
 import acoustics as ac  # https://github.com/timmahrt/pyAcoustics
 import soundfile as sf
 from scipy import interpolate as intp
@@ -586,6 +587,23 @@ class Curve:
 
     def get_y(self):
         return getattr(self, "_y", None)
+
+    def export_to_clipboard(self, **interpolate_to_ppo_kwargs):
+        if not interpolate_to_ppo_kwargs:
+            xy_export = np.transpose(self.get_xy(ndarray=True))
+        else:
+            x_intp, y_intp = interpolate_to_ppo(
+                *self.get_xy(),
+                **interpolate_to_ppo_kwargs
+            )
+
+            if arrays_are_equal((x_intp, self.get_xy()[0])):  # interpolation made no difference
+                xy_export = np.transpose(self.get_xy(ndarray=True))
+            else:
+                xy_export = np.column_stack((x_intp, y_intp))
+
+        pd.DataFrame(xy_export).to_clipboard(
+            excel=True, index=False, header=["Frequency", self.get_full_name()])
 
     def set_name_base(self, name):
         val = name if isinstance(name, str) else None
