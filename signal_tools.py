@@ -1036,7 +1036,7 @@ def curve_summation(curves_xy: list) -> Curve:
     # Difference
     xy_diff = np.array([all_x_values, y0 - y1]).T
     xy_diff = xy_diff[~np.isnan(xy_diff).any(axis=1)]
-    if np.mean(xy_diff) < 0:
+    if np.mean(xy_diff[:, 1]) < 0:
         xy_diff[:, 1] = xy_diff[:, 1] * -1
 
     return (
