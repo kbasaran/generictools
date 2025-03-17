@@ -12,6 +12,8 @@ from matplotlib.backends.backend_qtagg import (
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 
+import matplotlib
+matplotlib.rcParams['savefig.format'] = 'svg'
 
 import logging
 if __name__ == "__main__":
