@@ -285,17 +285,13 @@ class UserForm(qtw.QWidget):
                 assert isinstance(value_new, str)
                 obj.setText(value_new)
 
-            elif isinstance(obj, qtw.QPushButton):
-                raise TypeError(
-                    f"Don't know what to do with value_new={value_new} for button {key}.")
-
             elif isinstance(obj, qtw.QButtonGroup):
                 obj.button(value_new).setChecked(True)
             
             elif isinstance(obj, qtw.QAbstractButton):            
                 if isinstance(obj, qtw.QCheckBox):
                     obj.setChecked(value_new)
-                elif not isinstance(value_new, None):
+                elif value_new is not None:  # e.g. another type of button like QPushButton
                     raise ValueError(f"Only a 'None' value is accepted to set state of type button '{type(obj)}'.")
 
             elif type(value_new) in [int, float]:
@@ -337,7 +333,7 @@ class UserForm(qtw.QWidget):
         elif isinstance(obj, qtw.QAbstractButton):            
             if isinstance(obj, qtw.QCheckBox):
                 obj_value = obj.isChecked()
-            else:
+            else:  # e.g. QPushButton
                 obj_value = None
 
         else:
