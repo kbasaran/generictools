@@ -204,9 +204,10 @@ class MatplotlibWidget(qtw.QWidget):
     def clear_graph(self):
         ix_to_remove = self._get_line_indexes_in_user_defined_order()
         self.remove_multiple_line2d(ix_to_remove)
+        self.ax.clear()
         self.canvas.toolbar.update()  # resets the toolbar
         # necessary to reset the history for home and back/forward buttons
-        self.ax.set_prop_cycle(None)
+        # self.ax.set_prop_cycle(None)  # ax.clear() made this redundant
 
     @qtc.Slot(list)
     def remove_multiple_line2d(self, ix: list):
