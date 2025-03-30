@@ -291,8 +291,8 @@ class UserForm(qtw.QWidget):
             elif isinstance(obj, qtw.QAbstractButton):            
                 if isinstance(obj, qtw.QCheckBox):
                     obj.setChecked(value_new)
-                elif value_new is not None:  # e.g. another type of button like QPushButton
-                    raise ValueError(f"Only a 'None' value is accepted to set state of type button '{type(obj)}'.")
+                else:  # e.g. another type of button like QPushButton
+                    raise ValueError(f"No value update can be done for '{type(obj)}'. Received value: {value_new}")
 
             elif type(value_new) in [int, float]:
                 obj.setValue(value_new / obj.coeff_for_SI)
@@ -353,7 +353,8 @@ class UserForm(qtw.QWidget):
         values = {}
         for key in self.interactable_widgets.keys():
             obj_value = self.get_value(key)
-            values[key] = obj_value
+            if obj_value is not None:  # buttons for example will give a None value
+                values[key] = obj_value
 
         return values
 
