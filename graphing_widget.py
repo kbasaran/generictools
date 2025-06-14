@@ -174,7 +174,10 @@ class MatplotlibWidget(qtw.QWidget):
         else:
             title = None
 
-        self.ax.legend(handles=handles, title=title)
+        if handles:
+            self.ax.legend(handles=handles, title=title)
+        else:
+            self.ax.legend.remove()
 
     @qtc.Slot()
     def add_line2d(self, i_insert: int, label: str, data: tuple, update_figure=True, line2d_kwargs={}):
