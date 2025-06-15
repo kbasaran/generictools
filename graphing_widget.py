@@ -63,7 +63,7 @@ class MatplotlibWidget(qtw.QWidget):
         layout.addWidget(self.canvas)
 
         self.ax = self.canvas.figure.subplots()
-        self.set_grid_type()
+        self._setup_grid()
 
         # https://matplotlib.org/stable/api/_as_gen/matplotlib._lines.line2d.html
         
@@ -73,7 +73,7 @@ class MatplotlibWidget(qtw.QWidget):
         # timer.start(2000)
 
     @qtc.Slot()
-    def set_grid_type(self):
+    def _setup_grid(self):
         self.ax.grid(visible=False, which="both", axis='both')
 
         if self.app_settings.graph_grids == "default":
@@ -155,6 +155,7 @@ class MatplotlibWidget(qtw.QWidget):
                 y_min_max = (kwargs["min"], kwargs["max"])
                 self.ax.set_ylim(y_min_max)
 
+        self._setup_grid()
         self.canvas.draw_idle()
         logger.debug(f"Graph updated. {len(self.ax.get_lines())} lines."
                      f"\nTook {(time.perf_counter()-start_time)*1000:.4g}ms.")
