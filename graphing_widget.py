@@ -337,7 +337,7 @@ class MatplotlibWidget(qtw.QWidget):
 
 
         timer = qtc.QTimer()
-        timer.singleShot(1000, partial(stop_flash, self, line, (old_alpha, begin_lw, old_zorder)))
+        timer.singleShot(3000, partial(stop_flash, self, line, (old_alpha, begin_lw, old_zorder)))
 
     @qtc.Slot(dict)
     def update_labels_and_visibilities(self, label_and_visibility:dict, update_figure=True):
