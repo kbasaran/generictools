@@ -316,28 +316,29 @@ class MatplotlibWidget(qtw.QWidget):
     @qtc.Slot(int)
     def flash_curve(self, i: int):
         line = self.get_lines_in_user_defined_order(i)
-        begin_lw = line.get_lw()
-        line.set_lw(begin_lw * 2.5)
-        old_alpha = line.get_alpha()
-        if old_alpha:
-            line.set_alpha(1)
-        old_zorder = line.get_zorder()
-        line.set_zorder(len(self.ax.get_lines()))
+        
+        old_lw = line.get_lw()
+        line.set_lw(old_lw * 4)
+        
+        # old_alpha = line.get_alpha()
+        # if old_alpha:
+            # line.set_alpha(1)
+            
+        # old_zorder = line.get_zorder()
+        # line.set_zorder(len(self.ax.get_lines()))
 
         self.ax.draw_artist(line)
         self.canvas.draw_idle()
 
-        def stop_flash(self, line, old_states):
-            line.set_alpha(old_states[0])
-            line.set_lw(old_states[1])
-            line.set_zorder(old_states[2])
+        def stop_flash(self, line, old_states=None):
+            line.set_lw(line.get_lw() / 4)
     
             self.ax.draw_artist(line)
             self.canvas.draw_idle()
 
 
         timer = qtc.QTimer()
-        timer.singleShot(3000, partial(stop_flash, self, line, (old_alpha, begin_lw, old_zorder)))
+        timer.singleShot(3000, partial(stop_flash, self, line))
 
     @qtc.Slot(dict)
     def update_labels_and_visibilities(self, label_and_visibility:dict, update_figure=True):
