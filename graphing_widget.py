@@ -239,11 +239,20 @@ class MatplotlibWidget(qtw.QWidget):
         return np.interp(np.log(x), np.log(reference_curve_x), reference_curve_y, left=np.nan, right=np.nan)
 
     @qtc.Slot()
-    def toggle_reference_curve(self, ref_index_and_curve: (tuple, None)):
-        # ref_index_and_curve: [index, curve] or None
+    def toggle_reference_curve(self, ref_index_and_curve: tuple | None):
+
         if ref_index_and_curve is not None:
             # new ref. curve introduced
             reference_curve_x, reference_curve_y = ref_index_and_curve[1].get_xy()
+
+            # Check if reference curve covers the whole frequency range
+            current_curves_x_arrays = [line2d.get_xdata() for line2d in self.ax.get_lines()]
+            x_min_among_current_curves = min(x[0] for x in current_curves_x_arrays)
+            x_max_among_current_curves = max(x[-1] for x in current_curves_x_arrays)
+            if x_min_among_current_curves < reference_curve_x[0] or \
+                x_max_among_current_curves > reference_curve_x[-1]:
+                raise ValueError(f"Reference curve doesn't cover the whole frequency range {(x_min_among_current_curves, x_max_among_current_curves)}")
+
 
             self._ref_index_and_curve = ref_index_and_curve
             for line2d in self.ax.get_lines():
