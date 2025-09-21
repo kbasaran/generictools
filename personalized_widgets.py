@@ -437,7 +437,7 @@ class ResultTextBox(qtw.QDialog):
         button_group.buttons()["ok_pushbutton"].clicked.connect(
             self.accept)
 
-class ErrorHandlerDeveloper:
+class ErrorHandlerDeveloper_old:
     def __init__(self, app, logger):
         self.app = app
     
@@ -458,34 +458,46 @@ class ErrorHandlerDeveloper:
     
         message_box.exec()
 
-class ErrorHandlerUser:
-    def __init__(self, app, logger):
-        self.app = app
-    
+class ErrorPopup(qtw.QErrorMessage):
+    def __init__(self, error_msg, parent=None):
+        super().__init__(parent=parent)
+        self.setModal(True)
+        self.setMaximumWidth(420)
+        self.setMinimumHeight(240)
+        self.showMessage(error_msg)
+
+
+class ErrorHandler:
+    def __init__(self, logger, developer=False):
+        self.developer = developer
+
     def excepthook(self, etype, value, tb):
         error_msg_developer = ''.join(traceback.format_exception(etype, value, tb))
         error_info = traceback.format_exception(etype, value, tb)
-        
+
         if isinstance(error_info, list) and len(error_info) > 2:
             error_msg_short = error_info[-2] + "\n\n" + error_info[-1]
             # bad solution
         else:
             error_msg_short = error_info
-            
-        message_box = qtw.QMessageBox(qtw.QMessageBox.Warning,
-                                      "Error    :(",
-                                      error_msg_short +
-                                      "\n\nThis event may be logged unless ignore is chosen.",
-                                      )
-        message_box.addButton(qtw.QMessageBox.Ignore)
-        close_button = message_box.addButton(qtw.QMessageBox.Close)
-    
-        message_box.setEscapeButton(qtw.QMessageBox.Ignore)
-        message_box.setDefaultButton(qtw.QMessageBox.Close)
-    
-        close_button.clicked.connect(logger.warning(error_msg_developer))
-    
-        message_box.exec()
+
+        if self.developer:
+            logger.warning(error_msg_developer)
+            ErrorPopup(error_msg_developer)
+        else:
+            logger.warning(error_msg_short)
+            ErrorPopup(error_msg_short)
+
+
+class ErrorHandlerUser(ErrorHandler):
+    def __init__(self, logger):
+        super().__init__(logger, developer=False)
+
+
+class ErrorHandlerDeveloper(ErrorHandler):
+    def __init__(self, logger):
+        super().__init__(logger, developer=True)
+
 
 class LoadSaveEngine:
     """

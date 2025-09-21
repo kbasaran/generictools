@@ -24,7 +24,9 @@ else:
 
 
 class MatplotlibWidget(qtw.QWidget):
-    signal_is_reference_curve_active = qtc.Signal(bool)
+    signal_reference_curve_activated = qtc.Signal(int)
+    signal_reference_curve_deactivated = qtc.Signal(int)
+    signal_reference_curve_failed = qtc.Signal(str)
     signal_good_beep = qtc.Signal()
     signal_bad_beep = qtc.Signal()
     available_styles = list(plt.style.available)
@@ -32,14 +34,14 @@ class MatplotlibWidget(qtw.QWidget):
     def print_line_states(self):
         print()
         n_lines = self._qlistwidget_indexes_of_lines.size
-        for i, line in enumerate(self.get_lines_in_user_defined_order()):
+        for i, line in enumerate(self.get_lines_in_qlist_order()):
             print(i, line.get_label(), line.get_zorder())
 
     def __init__(self, settings, layout_engine="constrained"):
         self.app_settings = settings
         super().__init__()
         layout = qtw.QVBoxLayout(self)
-        self._ref_index_and_curve = None
+        self._ref_index_x_y = None
         self._qlistwidget_indexes_of_lines = np.array([], dtype=int)
         self.set_y_limits_policy(None)
 
@@ -105,10 +107,14 @@ class MatplotlibWidget(qtw.QWidget):
             
             # Update zorders
             n_lines = self._qlistwidget_indexes_of_lines.size
-            for i, line in enumerate(self.get_lines_in_user_defined_order()):
+            for i, line in enumerate(self.get_lines_in_qlist_order()):
                 # print(i, line.get_label(), line.get_zorder())
                 # print("Settings zorders")
-                zorder_offset = -1_000_000 if line.get_label()[0] == "_" else 0
+                if line.get_label()[0] == "_" or (self._ref_index_x_y is not None and self._ref_index_x_y[0] == i):
+                    zorder_offset = -1_000_000
+                else:
+                    zorder_offset = 0
+
                 line.set_zorder(n_lines - i + zorder_offset)
 
             if self.ax.has_data() and getattr(self.app_settings, "show_legend", True):
@@ -129,13 +135,18 @@ class MatplotlibWidget(qtw.QWidget):
             if self.y_limits_policy["name"] is None:
                 self.ax.autoscale(enable=True, axis="both")
 
+            if self.y_limits_policy["name"] is "reference_curve":
+                y_max = np.max([np.max(np.abs(line.get_ydata())) for line in self.ax.get_lines()])
+                graph_max = 5 * np.ceil((y_max - 2) / 5)
+                self.ax.set_ylim((-graph_max, graph_max))
+
             elif self.y_limits_policy["name"] == "SPL":
                 y_arrays = [line.get_ydata() for line in self.ax.get_lines() if "Xpeak limited" not in line.get_label()]
                 if y_arrays:
-                    y_max = max([max(arr) for arr in y_arrays])
-                    y_min = min([min(arr) for arr in y_arrays])
+                    y_max = np.percentile([max(arr) for arr in y_arrays], 95)
+                    y_min = np.percentile([min(arr) for arr in y_arrays], 10)
                     graph_max = 5 * np.ceil((y_max + 3) / 5)
-                    graph_range = 5 * np.floor(min(50, max(30, graph_max - y_min)) / 5)
+                    graph_range = 5 * np.floor(min(40, max(20, graph_max - y_min)) / 5)
                     self.ax.set_ylim((graph_max - graph_range, graph_max))
 
             elif self.y_limits_policy["name"] == "impedance":
@@ -161,19 +172,19 @@ class MatplotlibWidget(qtw.QWidget):
                      f"\nTook {(time.perf_counter()-start_time)*1000:.4g}ms.")
 
     def _create_ordered_legend(self):
-        handles = self.get_visible_lines_in_user_defined_order()
-        if self.app_settings.max_legend_size > 0:
-            handles = handles[:self.app_settings.max_legend_size]
+        handles = self.get_visible_lines_in_qlist_order()
 
-        # print([(line.get_label(), line.get_zorder()) for line in handles])
-
-        # labels = [line.get_label() for line in handles]
-
-        if self._ref_index_and_curve:
-            title = "Relative to: " + self._ref_index_and_curve[1].get_full_name()
+        if self._ref_index_x_y:
+            i_ref_curve = self._ref_index_x_y[0]
+            ref_line2D = self.get_line_in_qlist_order(i_ref_curve)
+            title = "Relative to: " + ref_line2D.get_label()
             title = title.removesuffix(" - reference")
+            handles.pop(i_ref_curve)
         else:
             title = None
+
+        if self.app_settings.max_legend_size > 0:
+            handles = handles[:self.app_settings.max_legend_size]
 
         if handles:
             self.ax.legend(handles=handles, title=title)
@@ -183,13 +194,13 @@ class MatplotlibWidget(qtw.QWidget):
     @qtc.Slot()
     def add_line2d(self, i_insert: int, label: str, data: tuple, update_figure=True, line2d_kwargs={}):
         # Make sure reference curve position stored stays correct
-        if self._ref_index_and_curve and i_insert <= self._ref_index_and_curve[0]:
-            self._ref_index_and_curve[0] += 1
+        if self._ref_index_x_y and i_insert <= self._ref_index_x_y[0]:
+            self._ref_index_x_y[0] += 1
 
         # Modify curve before pasting if graph has a reference curve
         x_in, y_in = data
-        if self._ref_index_and_curve:
-            reference_curve_x, reference_curve_y = self._ref_index_and_curve[1].get_xy()
+        if self._ref_index_x_y:
+            reference_curve_x, reference_curve_y = self._ref_index_x_y[1:3]
             ref_y_intp = self._reference_curve_interpolated(tuple(x_in),
                                                             tuple(reference_curve_x),
                                                             tuple(reference_curve_y),
@@ -206,7 +217,7 @@ class MatplotlibWidget(qtw.QWidget):
 
     @qtc.Slot()
     def clear_graph(self):
-        ix_to_remove = self._get_line_indexes_in_user_defined_order()
+        ix_to_remove = self._get_line_indexes_in_qlist_order()
         self.remove_multiple_line2d(ix_to_remove)
         self.ax.clear()
         self.canvas.toolbar.update()  # resets the toolbar
@@ -215,16 +226,16 @@ class MatplotlibWidget(qtw.QWidget):
 
     @qtc.Slot(list)
     def remove_multiple_line2d(self, ix: list):
-        if self._ref_index_and_curve:
-            if self._ref_index_and_curve[0] in ix:
-                self.toggle_reference_curve(None)
+        if self._ref_index_x_y:
+            if self._ref_index_x_y[0] in ix:
+                self.deactivate_reference_curve()
             else:
-                self._ref_index_and_curve[0] -= sum(i < self._ref_index_and_curve[0] for i in ix)
+                self._ref_index_x_y[0] -= sum(i < self._ref_index_x_y[0] for i in ix)
                 # summing booleans
 
-        lines_in_user_defined_order = self.get_lines_in_user_defined_order()
+        lines_in_qlist_order = self.get_lines_in_qlist_order()
         for index_to_remove in sorted(ix, reverse=True):
-            lines_in_user_defined_order[index_to_remove].remove()
+            lines_in_qlist_order[index_to_remove].remove()
             self._qlistwidget_indexes_of_lines = \
                 self._qlistwidget_indexes_of_lines[
                     np.nonzero(self._qlistwidget_indexes_of_lines != index_to_remove)
@@ -239,72 +250,98 @@ class MatplotlibWidget(qtw.QWidget):
         return np.interp(np.log(x), np.log(reference_curve_x), reference_curve_y, left=np.nan, right=np.nan)
 
     @qtc.Slot()
-    def toggle_reference_curve(self, ref_index_and_curve: tuple | None):
+    def activate_reference_curve(self, i_ref_curve: int):
 
-        if ref_index_and_curve is not None:
-            # new ref. curve introduced
-            reference_curve_x, reference_curve_y = ref_index_and_curve[1].get_xy()
+        try:
+            if self._ref_index_x_y is not None:
+                raise RuntimeError("There is already an active reference curve. Deactivate that one first.")
+
+            ref_curve = self.get_line_in_qlist_order(i_ref_curve)
+            ref_x, ref_y = ref_curve.get_xdata(), ref_curve.get_ydata()
 
             # Check if reference curve covers the whole frequency range
             current_curves_x_arrays = [line2d.get_xdata() for line2d in self.ax.get_lines()]
             x_min_among_current_curves = min(x[0] for x in current_curves_x_arrays)
             x_max_among_current_curves = max(x[-1] for x in current_curves_x_arrays)
-            if x_min_among_current_curves < reference_curve_x[0] or \
-                x_max_among_current_curves > reference_curve_x[-1]:
-                raise ValueError(f"Reference curve doesn't cover the whole frequency range {(x_min_among_current_curves, x_max_among_current_curves)}")
+            if x_min_among_current_curves < ref_x[0] or \
+                x_max_among_current_curves > ref_x[-1]:
+                raise RuntimeError(f"Reference curve doesn't cover the whole frequency range."
+                                   f"\nRequired minimum range is ({x_min_among_current_curves:.5g} - {x_max_among_current_curves:.5g}) Hz"
+                                   )
 
-
-            self._ref_index_and_curve = ref_index_and_curve
+            self._ref_index_x_y = [i_ref_curve, ref_x, ref_y]
             for line2d in self.ax.get_lines():
                 x, y = line2d.get_xdata(), line2d.get_ydata()
                 ref_y_intp = self._reference_curve_interpolated(tuple(x),
-                                                                tuple(reference_curve_x),
-                                                                tuple(reference_curve_y),
+                                                                tuple(ref_x),
+                                                                tuple(ref_y),
                                                                 )
                 line2d.set_ydata(y - ref_y_intp)
 
-            self.update_labels_and_visibilities({self._ref_index_and_curve[0]: (None, False)})
+            # ref_curve.set_label("_" + ref_curve.get_label())
 
-        elif ref_index_and_curve is None and self._ref_index_and_curve is not None:
-            # there was a reference curve active and now it is deactivated.
-            reference_curve_x, reference_curve_y = self._ref_index_and_curve[1].get_xy()
+            self.set_y_limits_policy("reference_curve")
+            self.update_figure()
+            self.signal_reference_curve_activated.emit(i_ref_curve)
+        except RuntimeError as e:
+            self.signal_reference_curve_failed.emit(str(e))
+
+    @qtc.Slot()
+    def deactivate_reference_curve(self):
+        try:
+            if self._ref_index_x_y is None:
+                raise RuntimeError("There is no active reference curve. Nothing to deactivate.")
+
+            i_ref_curve, ref_x, ref_y = self._ref_index_x_y
+
             for line2d in self.ax.get_lines():
                 x, y = line2d.get_xdata(), line2d.get_ydata()
                 ref_y_intp = self._reference_curve_interpolated(tuple(x),
-                                                                tuple(reference_curve_x),
-                                                                tuple(reference_curve_y),
+                                                                tuple(ref_x),
+                                                                tuple(ref_y),
                                                                 )
                 line2d.set_ydata(y + ref_y_intp)
 
-            self.update_labels_and_visibilities({self._ref_index_and_curve[0]: (None,
-                                                                  self._ref_index_and_curve[1].is_visible()
-                                                                  )
-                                   })
+            old_ref_curve = self.get_line_in_qlist_order(i_ref_curve)
+            # old_ref_curve.set_label(old_ref_curve.get_label()[1:])
 
-            self._ref_index_and_curve = None
+            self._ref_index_x_y = None
+            self.set_y_limits_policy("SPL")
+            self.update_figure()
+            self.signal_reference_curve_deactivated.emit(i_ref_curve)
+        except RuntimeError as e:
+            self.signal_reference_curve_failed.emit(str(e))
 
-        else:
-            # all other scenarios. no reference should be set.
-            self._ref_index_and_curve = None
-
-        self.signal_is_reference_curve_active.emit(self._ref_index_and_curve is not None)
-        self.update_figure()
-
-    def _get_line_indexes_in_user_defined_order(self):
+    def _get_line_indexes_in_qlist_order(self):
+        """
+        Line2D's in matplotlib graph are not sorted in the same order with curves in Qlist widget.
+        This function returns the Qlist positions of each line2D as a list.
+        """
         line_indexes_in_qlist_order = np.argsort(self._qlistwidget_indexes_of_lines)
         return line_indexes_in_qlist_order
 
-    def get_lines_in_user_defined_order(self, qlist_index=None):
-        if qlist_index is None:
-            line_indexes_in_qlist_order = self._get_line_indexes_in_user_defined_order()
-            return [self.ax.get_lines()[i] for i in line_indexes_in_qlist_order]
-        else:
-            graph_index = np.where(self._qlistwidget_indexes_of_lines == qlist_index)[0][0]
-            return self.ax.get_lines()[graph_index]
+    def get_line_in_qlist_order(self, qlist_index):
+        """
+        Line2D's in matplotlib graph are not sorted in the same order with curves in Qlist widget.
+        This function returns the line2D at a certain location on the Qlist widget.
+        """
+        graph_index = np.where(self._qlistwidget_indexes_of_lines == qlist_index)[0][0]
+        return self.ax.get_lines()[graph_index]
 
-    def get_visible_lines_in_user_defined_order(self):
-        lines_in_user_defined_order = self.get_lines_in_user_defined_order()
-        return [line for line in lines_in_user_defined_order if line.get_alpha() in (None, 1)]
+    def get_lines_in_qlist_order(self):
+        """
+        Line2D's in matplotlib graph are not sorted in the same order with curves in Qlist widget.
+        This function returns each line2D as a list, ordered as in Qlist widget.
+        """
+        line_indexes_in_qlist_order = self._get_line_indexes_in_qlist_order()
+        return [self.ax.get_lines()[i] for i in line_indexes_in_qlist_order]
+
+    def get_visible_lines_in_qlist_order(self):
+        """
+        Same with get_lines_in_qlist_order, but return only visible lines.
+        """
+        lines_in_qlist_order = self.get_lines_in_qlist_order()
+        return [line for line in lines_in_qlist_order if line.get_alpha() in (None, 1)]
 
     @qtc.Slot(dict)
     def change_lines_order(self, new_indexes: dict):
@@ -317,14 +354,14 @@ class MatplotlibWidget(qtw.QWidget):
             self._qlistwidget_indexes_of_lines[line_index_in_graph] = new_location_in_qlist_widget
 
             # keep the reference index always correct
-            if self._ref_index_and_curve and current_location_in_qlist_widget == self._ref_index_and_curve[0]:
-                self._ref_index_and_curve[0] = new_location_in_qlist_widget
+            if self._ref_index_x_y and current_location_in_qlist_widget == self._ref_index_x_y[0]:
+                self._ref_index_x_y[0] = new_location_in_qlist_widget
 
         self.update_figure(recalculate_limits=False)
 
     @qtc.Slot(int)
     def flash_curve(self, i: int):
-        line = self.get_lines_in_user_defined_order(i)
+        line = self.get_line_in_qlist_order(i)
         
         old_lw = line.get_lw()
         line.set_lw(old_lw * 4)
@@ -357,10 +394,10 @@ class MatplotlibWidget(qtw.QWidget):
         # first value is label. give label without "_" prefixes
         # second value is visibility. give boolean
         
-        lines_in_user_defined_order = self.get_lines_in_user_defined_order()
+        lines_in_qlist_order = self.get_lines_in_qlist_order()
         for i, (new_label, visible) in label_and_visibility.items():
             
-            line = lines_in_user_defined_order[i]
+            line = lines_in_qlist_order[i]
             # print(line.get_label(), i, new_label, visible)
 
             if new_label is None:
@@ -388,7 +425,7 @@ class MatplotlibWidget(qtw.QWidget):
     def reset_colors(self):
         colors = plt.rcParams["axes.prop_cycle"]()
 
-        for line in self.get_lines_in_user_defined_order():
+        for line in self.get_lines_in_qlist_order():
             line.set_color(next(colors)["color"])
 
         self.update_figure(recalculate_limits=False)
