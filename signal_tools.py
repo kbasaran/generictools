@@ -588,6 +588,12 @@ class Curve:
                 setattr(self, "_y", np.array(y))
                 setattr(self, "_xy", np.vstack([self._x, self._y]))
 
+            if i_start == 1:  # first row must be title row
+                base_name = lines[0]
+                if "\t" in base_name:
+                    base_name = base_name.split("\t")[1]
+                self.set_name_base(base_name)
+
             else:
                 ValueError("xy input unrecognized")
         else:
@@ -657,7 +663,7 @@ class Curve:
         self._identification["base"]
         if self._identification["base"] in (None, ""):
             x = self.get_xy()[0]
-            self._identification["base"] = f"Curve with {len(x)} data points, {x[0]:.5g}Hz-{x[-1]:.5g}Hz"
+            self._identification["base"] = f"Curve with {len(x)} data points {x[0]:.5g} - {x[-1]:.5g} Hz"
         return self._identification["base"]
 
     def get_base_name_and_suffixes(self, joiner=" - "):
