@@ -110,22 +110,15 @@ class MatplotlibWidget(qtw.QWidget):
             for i, line in enumerate(self.get_lines_in_qlist_order()):
                 # print(i, line.get_label(), line.get_zorder())
                 # print("Settings zorders")
-                if line.get_label()[0] == "_":
+                if line.get_label()[0] == "_" or self._ref_index_x_y is not None and self._ref_index_x_y[0] == i:
                     zorder_offset = -1_000_000
-                    line.set_visible(True)
-
-                elif self._ref_index_x_y is not None and self._ref_index_x_y[0] == i:
-                    zorder_offset = -1_000_000
-                    line.set_visible(False)
 
                 elif line.get_alpha() == 1.0:
                     zorder_offset = 1_000_000
-                    line.set_visible(True)
                     if line.get_lw() < default_line_width * 2:  # 1.0 means highlighted
                         line.set_lw(max(default_line_width * 2, line.get_lw() * 1.4))
                 else:
                     zorder_offset = 0
-                    line.set_visible(True)
                     if line.get_alpha() == 0.9 and line.get_lw() > default_line_width:  # 0.9 means regular
                         line.set_lw(default_line_width)
 
@@ -188,7 +181,6 @@ class MatplotlibWidget(qtw.QWidget):
             ref_line2D = self.get_line_in_qlist_order(i_ref_curve)
             title = "Relative to: " + ref_line2D.get_label()
             title = title.removesuffix(" - reference")
-            handles.pop(i_ref_curve)
         else:
             title = None
 
@@ -350,7 +342,7 @@ class MatplotlibWidget(qtw.QWidget):
         Same with get_lines_in_qlist_order, but return only visible lines.
         """
         lines_in_qlist_order = self.get_lines_in_qlist_order()
-        return [line for line in lines_in_qlist_order if line.get_alpha() in (None, 0.9, 1.0)]
+        return [line for line in lines_in_qlist_order if line.get_alpha() != 0.1]
 
     @qtc.Slot(dict)
     def change_lines_order(self, new_indexes: dict):
@@ -378,7 +370,7 @@ class MatplotlibWidget(qtw.QWidget):
         # third value is highlight state. give boolean.
         
         lines_in_qlist_order = self.get_lines_in_qlist_order()
-        for i, (new_label, visible, highlighted) in label_and_visibility.items():
+        for i, (new_label, visible, highlighted, reference) in label_and_visibility.items():
             
             line = lines_in_qlist_order[i]
             # print(line.get_label(), i, new_label, visible)
@@ -390,15 +382,15 @@ class MatplotlibWidget(qtw.QWidget):
                 new_label = new_label.removeprefix("_")
 
             # Visibility and highlight state
-            if visible is True:
+            if visible is False or reference is True:
+                line.set_alpha(0.1)
+                line.set_label("_" + new_label)
+            elif visible is True:
                 if highlighted is False:
                     line.set_alpha(0.9)
                 elif highlighted is True:
                     line.set_alpha(1.0)
                 line.set_label(new_label)
-            elif visible is False:
-                line.set_alpha(0.1)
-                line.set_label("_" + new_label)
 
             else:
                 raise ValueError("Must remind the visibility due to Matplotlib canvas"
