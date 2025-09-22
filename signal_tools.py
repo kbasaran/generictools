@@ -1080,9 +1080,9 @@ def calculate_average(curve: Curve, f_min: float, f_max: float, logarithmic: boo
     xy = curve.get_xy(ndarray=True)
 
     if f_min < xy[0][0]:
-        raise ValueError(f"Minimum frequency for average calculation is out of bounds for curve '{curve.get_full_name()}'.")
+        raise ValueError(f"Requested minimum frequency for average calculation range is out of bounds for curve '{curve.get_full_name()}'.")
     if f_max > xy[0][-1]:
-        raise ValueError(f"Maximum frequency for average calculation is out of bounds for curve '{curve.get_full_name()}'.")
+        raise ValueError(f"Requested maximum frequency for average calculation range is out of bounds for curve '{curve.get_full_name()}'.")
         
     if logarithmic:
         f_norm_min = np.log(f_min)
