@@ -446,6 +446,7 @@ class Curve:
     def __init__(self, initial_data):
         self._identification = {"prefix": "", "base": "", "suffixes": []}
         self._visible = True
+        self._highlighted = False
         self._reference = False
         self._check_if_sorted_and_valid = check_if_sorted_and_valid
         if isinstance(initial_data, str):
@@ -678,6 +679,13 @@ class Curve:
 
     def is_visible(self):
         return self._visible
+
+    def set_highlighted(self, val):
+        assert isinstance(val, bool)
+        self._highlighted = val
+
+    def is_highlighted(self):
+        return self._highlighted
 
 
 @lru_cache

@@ -103,29 +103,38 @@ class MatplotlibWidget(qtw.QWidget):
         start_time = time.perf_counter()
 
         if update_legend:
-            # print("----Start update legend")
+            default_line_width = plt.rcParams['lines.linewidth']
             
-            # Update zorders
+            # Update zorders and highlights
             n_lines = self._qlistwidget_indexes_of_lines.size
             for i, line in enumerate(self.get_lines_in_qlist_order()):
                 # print(i, line.get_label(), line.get_zorder())
                 # print("Settings zorders")
-                if line.get_label()[0] == "_" or (self._ref_index_x_y is not None and self._ref_index_x_y[0] == i):
+                if line.get_label()[0] == "_":
                     zorder_offset = -1_000_000
+                    line.set_visible(True)
+
+                elif self._ref_index_x_y is not None and self._ref_index_x_y[0] == i:
+                    zorder_offset = -1_000_000
+                    line.set_visible(False)
+
+                elif line.get_alpha() == 1.0:
+                    zorder_offset = 1_000_000
+                    line.set_visible(True)
+                    if line.get_lw() < default_line_width * 2:  # 1.0 means highlighted
+                        line.set_lw(max(default_line_width * 2, line.get_lw() * 1.4))
                 else:
                     zorder_offset = 0
+                    line.set_visible(True)
+                    if line.get_alpha() == 0.9 and line.get_lw() > default_line_width:  # 0.9 means regular
+                        line.set_lw(default_line_width)
 
                 line.set_zorder(n_lines - i + zorder_offset)
 
             if self.ax.has_data() and getattr(self.app_settings, "show_legend", True):
-              # print("Updating legend.")
-              self._create_ordered_legend()
-              # self.ax.draw_artist(legend)
-
+                self._create_ordered_legend()
             else:
-                # print("Removing legend")
-                self.ax.legend().remove()
-                # print("----End update legend")
+                self.ax.get_legend().remove()
 
         if recalculate_limits:
             self.ax.yaxis.set_major_locator(plt.AutoLocator())
@@ -135,9 +144,9 @@ class MatplotlibWidget(qtw.QWidget):
             if self.y_limits_policy["name"] is None:
                 self.ax.autoscale(enable=True, axis="both")
 
-            if self.y_limits_policy["name"] is "reference_curve":
+            if self.y_limits_policy["name"] == "reference_curve":
                 y_max = np.max([np.max(np.abs(line.get_ydata())) for line in self.ax.get_lines()])
-                graph_max = 5 * np.ceil((y_max - 2) / 5)
+                graph_max = max(5 * np.ceil((y_max - 2) / 5), 1)
                 self.ax.set_ylim((-graph_max, graph_max))
 
             elif self.y_limits_policy["name"] == "SPL":
@@ -186,10 +195,10 @@ class MatplotlibWidget(qtw.QWidget):
         if self.app_settings.max_legend_size > 0:
             handles = handles[:self.app_settings.max_legend_size]
 
-        if handles:
+        if len(handles) > 0:
             self.ax.legend(handles=handles, title=title)
         else:
-            self.ax.legend().remove()
+            self.ax.get_legend().remove()
 
     @qtc.Slot()
     def add_line2d(self, i_insert: int, label: str, data: tuple, update_figure=True, line2d_kwargs={}):
@@ -341,7 +350,7 @@ class MatplotlibWidget(qtw.QWidget):
         Same with get_lines_in_qlist_order, but return only visible lines.
         """
         lines_in_qlist_order = self.get_lines_in_qlist_order()
-        return [line for line in lines_in_qlist_order if line.get_alpha() in (None, 1)]
+        return [line for line in lines_in_qlist_order if line.get_alpha() in (None, 0.9, 1.0)]
 
     @qtc.Slot(dict)
     def change_lines_order(self, new_indexes: dict):
@@ -359,33 +368,6 @@ class MatplotlibWidget(qtw.QWidget):
 
         self.update_figure(recalculate_limits=False)
 
-    @qtc.Slot(int)
-    def flash_curve(self, i: int):
-        line = self.get_line_in_qlist_order(i)
-        
-        old_lw = line.get_lw()
-        line.set_lw(old_lw * 4)
-        
-        # old_alpha = line.get_alpha()
-        # if old_alpha:
-            # line.set_alpha(1)
-            
-        # old_zorder = line.get_zorder()
-        # line.set_zorder(len(self.ax.get_lines()))
-
-        self.ax.draw_artist(line)
-        self.canvas.draw_idle()
-
-        def stop_flash(self, line, old_states=None):
-            line.set_lw(line.get_lw() / 4)
-    
-            self.ax.draw_artist(line)
-            self.canvas.draw_idle()
-
-
-        timer = qtc.QTimer()
-        timer.singleShot(3000, partial(stop_flash, self, line))
-
     @qtc.Slot(dict)
     def update_labels_and_visibilities(self, label_and_visibility:dict, update_figure=True):
         # label_and_visibility
@@ -393,26 +375,31 @@ class MatplotlibWidget(qtw.QWidget):
         # contains tuples as values
         # first value is label. give label without "_" prefixes
         # second value is visibility. give boolean
+        # third value is highlight state. give boolean.
         
         lines_in_qlist_order = self.get_lines_in_qlist_order()
-        for i, (new_label, visible) in label_and_visibility.items():
+        for i, (new_label, visible, highlighted) in label_and_visibility.items():
             
             line = lines_in_qlist_order[i]
             # print(line.get_label(), i, new_label, visible)
 
+            # Label
             if new_label is None:
                 new_label = line.get_label()
-
             while new_label[0] == "_":
                 new_label = new_label.removeprefix("_")
 
+            # Visibility and highlight state
             if visible is True:
-                line.set_alpha(1)
+                if highlighted is False:
+                    line.set_alpha(0.9)
+                elif highlighted is True:
+                    line.set_alpha(1.0)
                 line.set_label(new_label)
-
             elif visible is False:
                 line.set_alpha(0.1)
                 line.set_label("_" + new_label)
+
             else:
                 raise ValueError("Must remind the visibility due to Matplotlib canvas"
                                  " tending to reset it on its own.")

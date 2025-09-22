@@ -1,2 +1,1 @@
 Use np.loadtxt for reading imported strings. it will be better code like that.
-minor locators not working really. y axis has 5dB steps only (major locators)
