@@ -185,8 +185,8 @@ class MatplotlibWidget(qtw.QWidget):
             i_ref_curve = self._ref_index_x_y[0]
             ref_line2D = self.get_line_in_qlist_order(i_ref_curve)
             print(ref_line2D.get_alpha())
-            title = "Relative to: " + ref_line2D.get_label()
-            title = title.removesuffix(" - reference").removeprefix("_")
+            title = "Relative to: " + ref_line2D.get_label().removeprefix("_")
+            title = title.removesuffix(" - reference")
         else:
             title = None
 
