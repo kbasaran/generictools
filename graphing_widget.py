@@ -25,7 +25,7 @@ else:
 
 class MatplotlibWidget(qtw.QWidget):
     signal_reference_curve_activated = qtc.Signal(int)
-    signal_reference_curve_deactivated = qtc.Signal(int)
+    signal_reference_curve_deactivated = qtc.Signal()
     signal_reference_curve_failed = qtc.Signal(str)
     signal_good_beep = qtc.Signal()
     signal_bad_beep = qtc.Signal()
@@ -104,23 +104,28 @@ class MatplotlibWidget(qtw.QWidget):
 
         if update_legend:
             default_line_width = plt.rcParams['lines.linewidth']
-            
+
             # Update zorders and highlights
             n_lines = self._qlistwidget_indexes_of_lines.size
             for i, line in enumerate(self.get_lines_in_qlist_order()):
-                # print(i, line.get_label(), line.get_zorder())
-                # print("Settings zorders")
+
+                # 4 states exist
+                # reference, 0.1 alpha, not shown on legend
+                # highlighted, 1.0 alpha
+                # normal shown, 0.9 alpha
+                # hidden, 0.1 alpha, not shown on legend
+
+                # reference or hidden
                 if line.get_label()[0] == "_" or self._ref_index_x_y is not None and self._ref_index_x_y[0] == i:
                     zorder_offset = -1_000_000
 
+                # highlighted
                 elif line.get_alpha() == 1.0:
                     zorder_offset = 1_000_000
-                    if line.get_lw() < default_line_width * 2:  # 1.0 means highlighted
-                        line.set_lw(max(default_line_width * 2, line.get_lw() * 1.4))
+
+                # normal
                 else:
                     zorder_offset = 0
-                    if line.get_alpha() == 0.9 and line.get_lw() > default_line_width:  # 0.9 means regular
-                        line.set_lw(default_line_width)
 
                 line.set_zorder(n_lines - i + zorder_offset)
 
@@ -179,15 +184,14 @@ class MatplotlibWidget(qtw.QWidget):
         if self._ref_index_x_y:
             i_ref_curve = self._ref_index_x_y[0]
             ref_line2D = self.get_line_in_qlist_order(i_ref_curve)
+            print(ref_line2D.get_alpha())
             title = "Relative to: " + ref_line2D.get_label()
-            title = title.removesuffix(" - reference")
+            title = title.removesuffix(" - reference").removeprefix("_")
         else:
             title = None
 
-        if self.app_settings.max_legend_size > 0:
+        if self.app_settings.max_legend_size > 0 and len(handles) > 0:
             handles = handles[:self.app_settings.max_legend_size]
-
-        if len(handles) > 0:
             self.ax.legend(handles=handles, title=title)
         else:
             self.ax.get_legend().remove()
@@ -266,8 +270,8 @@ class MatplotlibWidget(qtw.QWidget):
             x_max_among_current_curves = max(x[-1] for x in current_curves_x_arrays)
             if x_min_among_current_curves < ref_x[0] or \
                 x_max_among_current_curves > ref_x[-1]:
-                raise RuntimeError(f"Reference curve doesn't cover the whole frequency range."
-                                   f"\nRequired minimum range is ({x_min_among_current_curves:.5g} - {x_max_among_current_curves:.5g}) Hz"
+                raise RuntimeError(f"Reference curve doesn't cover the whole frequency range of"
+                                   f" ({x_min_among_current_curves:.5g} - {x_max_among_current_curves:.5g}) Hz"
                                    )
 
             self._ref_index_x_y = [i_ref_curve, ref_x, ref_y]
@@ -278,8 +282,6 @@ class MatplotlibWidget(qtw.QWidget):
                                                                 tuple(ref_y),
                                                                 )
                 line2d.set_ydata(y - ref_y_intp)
-
-            # ref_curve.set_label("_" + ref_curve.get_label())
 
             self.set_y_limits_policy("reference_curve")
             self.update_figure()
@@ -293,7 +295,7 @@ class MatplotlibWidget(qtw.QWidget):
             if self._ref_index_x_y is None:
                 raise RuntimeError("There is no active reference curve. Nothing to deactivate.")
 
-            i_ref_curve, ref_x, ref_y = self._ref_index_x_y
+            _, ref_x, ref_y = self._ref_index_x_y
 
             for line2d in self.ax.get_lines():
                 x, y = line2d.get_xdata(), line2d.get_ydata()
@@ -303,13 +305,10 @@ class MatplotlibWidget(qtw.QWidget):
                                                                 )
                 line2d.set_ydata(y + ref_y_intp)
 
-            old_ref_curve = self.get_line_in_qlist_order(i_ref_curve)
-            # old_ref_curve.set_label(old_ref_curve.get_label()[1:])
-
             self._ref_index_x_y = None
             self.set_y_limits_policy("SPL")
             self.update_figure()
-            self.signal_reference_curve_deactivated.emit(i_ref_curve)
+            self.signal_reference_curve_deactivated.emit()
         except RuntimeError as e:
             self.signal_reference_curve_failed.emit(str(e))
 
@@ -346,17 +345,17 @@ class MatplotlibWidget(qtw.QWidget):
 
     @qtc.Slot(dict)
     def change_lines_order(self, new_indexes: dict):
-        # new_indexes: each key is the old location of a qlist item. value is the new location
-
         # Scan the whole list of lines to replace them one by one
         for line_index_in_graph in range(self._qlistwidget_indexes_of_lines.size):
             current_location_in_qlist_widget = self._qlistwidget_indexes_of_lines[line_index_in_graph]
             new_location_in_qlist_widget = new_indexes[current_location_in_qlist_widget]
             self._qlistwidget_indexes_of_lines[line_index_in_graph] = new_location_in_qlist_widget
 
-            # keep the reference index always correct
-            if self._ref_index_x_y and current_location_in_qlist_widget == self._ref_index_x_y[0]:
-                self._ref_index_x_y[0] = new_location_in_qlist_widget
+        if self._ref_index_x_y:
+            location_ref_curve = None if self._ref_index_x_y is None else self._ref_index_x_y[0]
+            new_location_ref_curve = new_indexes.get(location_ref_curve, None)
+            if new_location_ref_curve != location_ref_curve:
+                self._ref_index_x_y[0] = new_location_ref_curve
 
         self.update_figure(recalculate_limits=False)
 
@@ -368,12 +367,12 @@ class MatplotlibWidget(qtw.QWidget):
         # first value is label. give label without "_" prefixes
         # second value is visibility. give boolean
         # third value is highlight state. give boolean.
-        
+
+        default_line_width = plt.rcParams['lines.linewidth']
         lines_in_qlist_order = self.get_lines_in_qlist_order()
         for i, (new_label, visible, highlighted, reference) in label_and_visibility.items():
             
             line = lines_in_qlist_order[i]
-            # print(line.get_label(), i, new_label, visible)
 
             # Label
             if new_label is None:
@@ -381,21 +380,31 @@ class MatplotlibWidget(qtw.QWidget):
             while new_label[0] == "_":
                 new_label = new_label.removeprefix("_")
 
-            # Visibility and highlight state
-            if visible is False or reference is True:
+            # 4 states exist
+            # reference, 0.1 alpha, not shown on legend
+            # highlighted, 1.0 alpha
+            # normal shown, 0.9 alpha
+            # hidden, 0.1 alpha, not shown on legend
+
+            if reference is True:
                 line.set_alpha(0.1)
                 line.set_label("_" + new_label)
-            elif visible is True:
-                if highlighted is False:
-                    line.set_alpha(0.9)
-                elif highlighted is True:
-                    line.set_alpha(1.0)
-                line.set_label(new_label)
 
-            else:
-                raise ValueError("Must remind the visibility due to Matplotlib canvas"
-                                 " tending to reset it on its own.")
-            # self.ax.draw_artist(line)  # optimization here???
+            elif highlighted is True:
+                line.set_alpha(1)
+                line.set_label(new_label)
+                if line.get_lw() < default_line_width * 2:
+                    line.set_lw(max(default_line_width * 2, line.get_lw() * 1.4))
+
+            elif visible is True:
+                line.set_alpha(0.9)
+                line.set_label(new_label)
+                if line.get_lw() > default_line_width:
+                    line.set_lw(default_line_width)
+
+            elif visible is False:
+                line.set_alpha(0.1)
+                line.set_label("_" + new_label)
 
         if label_and_visibility and update_figure:
             self.update_figure(recalculate_limits=False, update_legend=True)
