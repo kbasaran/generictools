@@ -150,10 +150,10 @@ class MatplotlibWidget(qtw.QWidget):
             elif self.y_limits_policy["name"] == "SPL":
                 y_arrays = [line.get_ydata() for line in self.ax.get_lines() if "Xpeak limited" not in line.get_label()]
                 if y_arrays:
-                    y_max = np.percentile([max(arr) for arr in y_arrays], 95)
-                    y_min = np.percentile([min(arr) for arr in y_arrays], 10)
+                    y_max = np.max([max(arr) for arr in y_arrays])
+                    y_min = np.min([min(arr) for arr in y_arrays])
                     graph_max = 5 * np.ceil((y_max + 3) / 5)
-                    graph_range = 5 * np.floor(min(40, max(20, graph_max - y_min)) / 5)
+                    graph_range = 5 * np.ceil(min(45, max(20, graph_max - y_min)) / 5)
                     self.ax.set_ylim((graph_max - graph_range, graph_max))
 
             elif self.y_limits_policy["name"] == "impedance":
