@@ -193,8 +193,8 @@ class MatplotlibWidget(qtw.QWidget):
         if self.app_settings.max_legend_size > 0 and len(handles) > 0:
             handles = handles[:self.app_settings.max_legend_size]
             self.ax.legend(handles=handles, title=title)
-        else:
-            self.ax.get_legend().remove()
+        elif legend := self.ax.get_legend():
+                legend.remove()
 
     @qtc.Slot()
     def add_line2d(self, i_insert: int, label: str, data: tuple, update_figure=True, line2d_kwargs={}):
