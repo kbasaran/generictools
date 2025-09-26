@@ -459,7 +459,7 @@ class ErrorHandlerDeveloper_old:
         message_box.exec()
 
 class ErrorPopup(qtw.QErrorMessage):
-    def __init__(self, error_msg, parent=None):
+    def __init__(self, parent, error_msg):
         super().__init__(parent=parent)
         self.setModal(True)
         self.setMaximumWidth(420)
@@ -468,35 +468,37 @@ class ErrorPopup(qtw.QErrorMessage):
 
 
 class ErrorHandler:
-    def __init__(self, logger, developer=False):
+    def __init__(self, parent, logger, developer=False):
         self.developer = developer
+        self.parent = parent
+        self.logger = logger
 
     def excepthook(self, etype, value, tb):
         error_msg_developer = ''.join(traceback.format_exception(etype, value, tb))
         error_info = traceback.format_exception(etype, value, tb)
 
         if isinstance(error_info, list) and len(error_info) > 2:
-            error_msg_short = error_info[-2] + "\n\n" + error_info[-1]
+            error_msg_short = error_info[-1]
             # bad solution
         else:
             error_msg_short = error_info
 
         if self.developer:
-            logger.warning(error_msg_developer)
-            ErrorPopup(error_msg_developer)
+            self.logger.warning(error_msg_developer)
+            ErrorPopup(self.parent, error_msg_developer)
         else:
-            logger.warning(error_msg_short)
-            ErrorPopup(error_msg_short)
+            self.logger.warning(error_msg_short)
+            ErrorPopup(self.parent, error_msg_short)
 
 
 class ErrorHandlerUser(ErrorHandler):
-    def __init__(self, logger):
-        super().__init__(logger, developer=False)
+    def __init__(self, parent, logger):
+        super().__init__(parent, logger, developer=False)
 
 
 class ErrorHandlerDeveloper(ErrorHandler):
-    def __init__(self, logger):
-        super().__init__(logger, developer=True)
+    def __init__(self, parent, logger):
+        super().__init__(parent, logger, developer=True)
 
 
 class LoadSaveEngine:
