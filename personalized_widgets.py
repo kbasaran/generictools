@@ -462,8 +462,8 @@ class ErrorPopup(qtw.QErrorMessage):
     def __init__(self, parent, error_msg):
         super().__init__(parent=parent)
         self.setModal(True)
-        self.setMaximumWidth(420)
-        self.setMinimumHeight(240)
+        self.setMaximumWidth(640)
+        self.setMinimumHeight(480)
         self.showMessage(error_msg)
 
 

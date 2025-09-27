@@ -657,7 +657,10 @@ class Curve:
 
     def get_name_suffixes(self):
         suffixes = self._identification["suffixes"]
-        return suffixes
+        if self._reference:
+            return [*suffixes, "reference"]
+        else:
+            return suffixes
 
     def get_name_base(self):
         self._identification["base"]

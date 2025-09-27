@@ -184,7 +184,7 @@ class MatplotlibWidget(qtw.QWidget):
         if self._ref_index_x_y:
             i_ref_curve = self._ref_index_x_y[0]
             ref_line2D = self.get_line_in_qlist_order(i_ref_curve)
-            print(ref_line2D.get_alpha())
+
             title = "Relative to: " + ref_line2D.get_label().removeprefix("_")
             title = title.removesuffix(" - reference")
         else:
@@ -256,7 +256,6 @@ class MatplotlibWidget(qtw.QWidget):
 
     @qtc.Slot()
     def activate_reference_curve(self, i_ref_curve: int):
-
         try:
             if self._ref_index_x_y is not None:
                 raise RuntimeError("There is already an active reference curve. Deactivate that one first.")
@@ -264,25 +263,31 @@ class MatplotlibWidget(qtw.QWidget):
             ref_curve = self.get_line_in_qlist_order(i_ref_curve)
             ref_x, ref_y = ref_curve.get_xdata(), ref_curve.get_ydata()
 
-            # Check if reference curve covers the whole frequency range
-            current_curves_x_arrays = [line2d.get_xdata() for line2d in self.ax.get_lines()]
-            x_min_among_current_curves = min(x[0] for x in current_curves_x_arrays)
-            x_max_among_current_curves = max(x[-1] for x in current_curves_x_arrays)
-            if x_min_among_current_curves < ref_x[0] or \
-                x_max_among_current_curves > ref_x[-1]:
-                raise RuntimeError(f"Reference curve doesn't cover the whole frequency range of"
-                                   f" ({x_min_among_current_curves:.5g} - {x_max_among_current_curves:.5g}) Hz"
-                                   )
+            # # Check if reference curve covers the whole frequency range
+            # current_curves_x_arrays = [line2d.get_xdata() for line2d in self.ax.get_lines()]
+            # x_min_among_current_curves = min(x[0] for x in current_curves_x_arrays)
+            # x_max_among_current_curves = max(x[-1] for x in current_curves_x_arrays)
+            # if x_min_among_current_curves < ref_x[0] or \
+            #     x_max_among_current_curves > ref_x[-1]:
+            #     raise RuntimeError(f"Reference curve doesn't cover the whole frequency range of"
+            #                        f" ({x_min_among_current_curves:.5g} - {x_max_among_current_curves:.5g}) Hz"
+            #                        )
 
-            self._ref_index_x_y = [i_ref_curve, ref_x, ref_y]
             for line2d in self.ax.get_lines():
                 x, y = line2d.get_xdata(), line2d.get_ydata()
+                line2d._original_xy = (x, y)  # to be able to revert back
                 ref_y_intp = self._reference_curve_interpolated(tuple(x),
                                                                 tuple(ref_x),
                                                                 tuple(ref_y),
                                                                 )
-                line2d.set_ydata(y - ref_y_intp)
+                new_xy = np.array([x, (y - ref_y_intp)])
+                mask = ~np.isnan(new_xy[1])
+                new_xy = new_xy[:, mask]
 
+                line2d.set_xdata(new_xy[0])
+                line2d.set_ydata(new_xy[1])
+
+            self._ref_index_x_y = [i_ref_curve, ref_x, ref_y]
             self.set_y_limits_policy("reference_curve")
             self.update_figure()
             self.signal_reference_curve_activated.emit(i_ref_curve)
@@ -295,15 +300,19 @@ class MatplotlibWidget(qtw.QWidget):
             if self._ref_index_x_y is None:
                 raise RuntimeError("There is no active reference curve. Nothing to deactivate.")
 
-            _, ref_x, ref_y = self._ref_index_x_y
+            # _, ref_x, ref_y = self._ref_index_x_y
+
 
             for line2d in self.ax.get_lines():
-                x, y = line2d.get_xdata(), line2d.get_ydata()
-                ref_y_intp = self._reference_curve_interpolated(tuple(x),
-                                                                tuple(ref_x),
-                                                                tuple(ref_y),
-                                                                )
-                line2d.set_ydata(y + ref_y_intp)
+                x, y = line2d._original_xy
+                line2d.set_xdata(x)
+                line2d.set_ydata(y)
+                # x, y = line2d.get_xdata(), line2d.get_ydata()
+                # ref_y_intp = self._reference_curve_interpolated(tuple(x),
+                #                                                 tuple(ref_x),
+                #                                                 tuple(ref_y),
+                #                                                 )
+                # line2d.set_ydata(y + ref_y_intp)
 
             self._ref_index_x_y = None
             self.set_y_limits_policy("SPL")
@@ -358,6 +367,13 @@ class MatplotlibWidget(qtw.QWidget):
                 self._ref_index_x_y[0] = new_location_ref_curve
 
         self.update_figure(recalculate_limits=False)
+
+    @qtc.Slot(tuple)
+    def update_lines_xy(self, tuple_per_i_line: dict, update_figure=True):
+        qlistwidget_indexes_of_lines = self._qlistwidget_indexes_of_lines
+        for i, (x, y) in tuple_per_i_line.items():
+            qlistwidget_indexes_of_lines[i].set_xdata(x)
+            qlistwidget_indexes_of_lines[i].set_ydata(y)
 
     @qtc.Slot(dict)
     def update_labels_and_visibilities(self, label_and_visibility:dict, update_figure=True):
