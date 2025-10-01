@@ -380,9 +380,11 @@ class MatplotlibWidget(qtw.QWidget):
         # label_and_visibility
         # keys are index of line in user defined order
         # contains tuples as values
-        # first value is label. give label without "_" prefixes
-        # second value is visibility. give boolean
-        # third value is highlight state. give boolean.
+
+        # 0th value is label. give label without "_" prefixes
+        # 1st value is visibility. give boolean
+        # 2nd value is highlight state. give boolean.
+        # 3rd value is reference state. give boolean.
 
         default_line_width = plt.rcParams['lines.linewidth']
         lines_in_qlist_order = self.get_lines_in_qlist_order()
@@ -396,7 +398,8 @@ class MatplotlibWidget(qtw.QWidget):
             while new_label[0] == "_":
                 new_label = new_label.removeprefix("_")
 
-            # 4 states exist
+
+            # 4 states exist for alpha
             # reference, 0.1 alpha, not shown on legend
             # highlighted, 1.0 alpha
             # normal shown, 0.9 alpha
