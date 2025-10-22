@@ -1,6 +1,7 @@
-PySide6
+pyside6
+numpy
 soundfile
 sounddevice
-matplotlib == 3.9.4
+matplotlib
 scipy
-acoustics >= 0.2.6
+acoustics
