@@ -1,8 +1,6 @@
 import sys
 import time
 import numpy as np
-from functools import partial
-from generictools import signal_tools
 from functools import lru_cache
 
 from PySide6 import QtCore as qtc
@@ -130,9 +128,9 @@ class MatplotlibWidget(qtw.QWidget):
                 line.set_zorder(n_lines - i + zorder_offset)
 
             if self.ax.has_data() and getattr(self.app_settings, "show_legend", True):
-                self._create_ordered_legend()
-            else:
-                self.ax.get_legend().remove()
+                self._place_ordered_legend()
+            elif legend := self.ax.get_legend():
+                legend.remove()
 
         if recalculate_limits:
             self.ax.yaxis.set_major_locator(plt.AutoLocator())
@@ -178,7 +176,7 @@ class MatplotlibWidget(qtw.QWidget):
         logger.debug(f"Graph updated. {len(self.ax.get_lines())} lines."
                      f"\nTook {(time.perf_counter()-start_time)*1000:.4g}ms.")
 
-    def _create_ordered_legend(self):
+    def _place_ordered_legend(self):
         handles = self.get_visible_lines_in_qlist_order()
 
         if self._ref_index_x_y:
@@ -190,11 +188,11 @@ class MatplotlibWidget(qtw.QWidget):
         else:
             title = None
 
-        if self.app_settings.max_legend_size > 0 and len(handles) > 0:
-            handles = handles[:self.app_settings.max_legend_size]
+        max_legend_size = getattr(self.app_settings, "max_legend_size", 0)
+        if len(handles) > 0:
+            if max_legend_size > 0:
+                handles = handles[:self.app_settings.max_legend_size]
             self.ax.legend(handles=handles, title=title)
-        elif legend := self.ax.get_legend():
-                legend.remove()
 
     @qtc.Slot()
     def add_line2d(self, i_insert: int, label: str, data: tuple, update_figure=True, line2d_kwargs={}):
