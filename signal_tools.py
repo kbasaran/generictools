@@ -629,9 +629,10 @@ class Curve:
         pd.DataFrame(xy_export).to_clipboard(
             excel=True, index=False, header=["Frequency", self.get_full_name()])
 
-    def set_name_base(self, name):
-        val = name if isinstance(name, str) else None
-        self._identification["base"] = val
+    def set_name_base(self, name: str):
+        if not isinstance(name, str):
+            raise ValueError("Curve name to set must be a string")
+        self._identification["base"] = name
 
     def set_name_prefix(self, prefix):
         val = prefix if isinstance(prefix, str) else None
