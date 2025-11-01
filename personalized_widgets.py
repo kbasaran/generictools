@@ -198,6 +198,47 @@ class ComboBox(qtw.QComboBox):
     def add_elements_to_dict(self, user_data_widgets: dict):
         user_data_widgets[self._name] = self
 
+    def get_value_personalized(self):
+        personalized_value = dict()
+        personalized_value["current_index"] = self.currentIndex()
+        personalized_value["current_data"] = self.currentData()
+        personalized_value["current_text"] = self.currentText()
+
+        personalized_value["items"] = list()
+        for i_item in range(self.count()):
+            item_text = self.itemText(i_item)
+            item_data = self.itemData(i_item)
+            personalized_value["items"].append((item_text, item_data))
+
+        return personalized_value
+
+    def update_value_personalized(self, key: str, value: dict):
+        existing_item_index = self.findText(value["current_text"])
+
+        logger.debug("Items in widget: " + str([(self.itemText(i), self.itemData(i)) for i in range(self.count())])
+                     + "\nNew text: " + str(value)
+                     + "\nFound in index: " + str(existing_item_index)
+                     )
+
+        if existing_item_index == -1:  # the combobox does not yet have this stored option
+            self.clear()
+            # add all options from received argument
+            items = value.get("items", [])
+            current_text = value["current_text"]
+            current_data = value.get("current_data", None)
+
+            if items:
+                for item in items:
+                    self.addItem(*item)
+                self.setCurrentText(current_text)
+
+            else:  # otherwise add only the item of last selection
+                self.addItem(current_text, current_data)
+                self.setCurrentIndex(0)
+
+        else:  # the combobox already has this name as an item. set to it.
+            self.setCurrentIndex(existing_item_index)
+
 
 class SubForm(qtw.QWidget):
     def __init__(self):
@@ -237,49 +278,13 @@ class UserForm(qtw.QWidget):
              ]
             )  # works???????????????????????
         no_widget_for_dict_key = set()
+
         for key, value_new in values_new.items():
             logger.debug(f"Updating '{key}' with '{value_new}'/{type(value_new)}")
             obj = self.interactable_widgets[key]
 
-            if isinstance(obj, qtw.QComboBox):
-                assert isinstance(value_new, dict)
-                existing_item_index = obj.findText(value_new["current_text"])
-
-                logger.debug("Items in widget: " + str([(obj.itemText(i), obj.itemData(i)) for i in range(obj.count())])
-                             + "\nNew text: " + str(value_new)
-                             + "\nFound in index: " + str(existing_item_index)
-                             )
-
-                if existing_item_index == -1:  # the combobox does not yet have this stored option
-                    
-                    # clear the combobox
-                    obj.clear()
-                    # add all options from storage
-                    items = value_new.get("items", [])
-                    current_text = value_new["current_text"]
-                    current_data = value_new.get("current_data", None)
-
-                    # if items are available in loaded values
-                    if items:
-                        for item in items:
-                            obj.addItem(*item)
-
-                        # if "current_index" not in value_new.keys():
-                        #     # to cover cases where index was not stored. for backwards compatibility.
-                        obj.setCurrentText(current_text)
-                        # else:
-                        #     obj.setCurrentIndex(value_new["current_index"])
-
-                    # otherwise add only the item of last selection
-                    else:
-                        obj.addItem(current_text, current_data)
-                        obj.setCurrentIndex(0)
-
-                else:  # the combobox already has this name as an item
-                    # we just set to the correct one
-                    obj.setCurrentIndex(existing_item_index)
-                    # # also set its data again just in case
-                    # obj.setItemData(existing_item_index, value_new.get("current_data", None))
+            if hasattr(obj, "update_value_personalized"):
+                obj.update_value_personalized(key, value_new)
 
             elif isinstance(obj, qtw.QLineEdit):
                 assert isinstance(value_new, str)
@@ -309,20 +314,12 @@ class UserForm(qtw.QWidget):
 
     def get_value(self, name: str):
         obj = self.interactable_widgets.get(name, None)
+
         if obj is None:
             raise ValueError(f"Object with name '{name}' not found.")
 
-        if isinstance(obj, qtw.QComboBox):
-            obj_value = dict()
-            obj_value["current_index"] = obj.currentIndex()
-            obj_value["current_data"] = obj.currentData()
-            obj_value["current_text"] = obj.currentText()
-
-            obj_value["items"] = list()
-            for i_item in range(obj.count()):
-                item_text = obj.itemText(i_item)
-                item_data = obj.itemData(i_item)
-                obj_value["items"].append((item_text, item_data))  # index 0 is name, 1 is data
+        elif hasattr(obj, "get_value_personalized"):
+            return obj.get_value_personalized()
 
         elif isinstance(obj, qtw.QLineEdit):
             obj_value = obj.text()
@@ -341,8 +338,6 @@ class UserForm(qtw.QWidget):
                 obj_value = obj.value() * obj.coeff_for_SI
             else:
                 obj_value = obj.value()
-        
-        logger.debug(f"Gotten value '{obj_value}'/{type(obj_value)} for object '{name}'.")
 
         return obj_value
 
