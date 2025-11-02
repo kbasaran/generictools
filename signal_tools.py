@@ -29,6 +29,7 @@ import time
 import multiprocessing
 
 import logging
+
 if __name__ == "__main__":
     logger = logging.getLogger(__name__)
 else:
@@ -195,17 +196,17 @@ class TestSignal():
             self.analysis += ("\n\nSignal includes fade in/out of "
                               + self.applied_fade_in_duration + "."
                               )
-    
+
     def spectrum_analysis(self):
         # Power spectrum of signal
         FS = self.FS
         PowerSpect = sig.welch(self.time_sig.astype("float32"),
-                                  fs=FS,
-                                  nperseg=FS/4,  # defines also window size
-                                  window="hann",
-                                  scaling="spectrum")
-        
-        power_spectrum = (PowerSpect[0], 10*np.log10(PowerSpect[1]))
+                               fs=FS,
+                               nperseg=FS / 4,  # defines also window size
+                               window="hann",
+                               scaling="spectrum")
+
+        power_spectrum = (PowerSpect[0], 10 * np.log10(PowerSpect[1]))
 
         if os.name == "posix":
             use_multiprocess = True  # tried in Linux, runs perfectly.
@@ -213,16 +214,16 @@ class TestSignal():
             use_multiprocess = False  # buggy in windows. requires multiprocess.freeze_support() also.
 
         octave_bands = calculate_3rd_octave_bands(self.time_sig, FS, multiprocess=use_multiprocess)
-        
+
         return power_spectrum, octave_bands
-            
+
     def apply_resampling(self, new_sample_rate):
         if new_sample_rate < self.FS:
             raise NotImplementedError("Downsampling of signal not implemented.")
         else:
             T = self.time_sig.shape[0] / self.FS
             N_new = round(new_sample_rate * T)
-            self.time_sig = sig.resample(self.time_sig, N_new) 
+            self.time_sig = sig.resample(self.time_sig, N_new)
             self.FS = new_sample_rate
 
     def apply_compression(self, **kwargs):
@@ -238,25 +239,27 @@ class TestSignal():
             return
 
         elif a > 0:  # expand
-        # y = sign(x).*exp((log(-1./(exp(log(abs(x + 1e-20))*k+log(a^k/(a^k+1)))-1))+log(abs(x + 1e-20))*k+log(a^k/(a^k+1)))/k)/a;
+            # y = sign(x).*exp((log(-1./(exp(log(abs(x + 1e-20))*k+log(a^k/(a^k+1)))-1))+log(abs(x + 1e-20))*k+log(a^k/(a^k+1)))/k)/a;
             self.time_sig /= peak_value
             self.time_sig = np.sign(self.time_sig) * \
-                np.exp(
-                       (
-                           np.log(-1 / (np.exp(np.log(np.abs(self.time_sig + 1e-20)) * k + np.log(a**k/(a**k + 1))) - 1))
-                           + np.log(np.abs(self.time_sig + 1e-20)) * k
-                           + np.log(a**k/(a**k + 1))
-                        )
-                       / k
-                       ) / a
+                            np.exp(
+                                (
+                                        np.log(-1 / (np.exp(np.log(np.abs(self.time_sig + 1e-20)) * k + np.log(
+                                            a ** k / (a ** k + 1))) - 1))
+                                        + np.log(np.abs(self.time_sig + 1e-20)) * k
+                                        + np.log(a ** k / (a ** k + 1))
+                                )
+                                / k
+                            ) / a
             self.time_sig *= peak_value
 
         elif a < 0:  # compress
-        # y = sign(x).*(((a*abs(x + 1e-20)).^k./((a*abs(x + 1e-20)).^k + 1)).^(1/k))/((a^k/(a^k + 1))^(1/k));
+            # y = sign(x).*(((a*abs(x + 1e-20)).^k./((a*abs(x + 1e-20)).^k + 1)).^(1/k))/((a^k/(a^k + 1))^(1/k));
             self.time_sig /= peak_value
             self.time_sig = np.sign(self.time_sig) * (
-                ((a * np.abs(self.time_sig + 1e-20))**k
-                 / ((a * np.abs(self.time_sig + 1e-20))**k + 1))**(1 / k)) / ((a**k / (a**k + 1))**(1 / k))
+                    ((a * np.abs(self.time_sig + 1e-20)) ** k
+                     / ((a * np.abs(self.time_sig + 1e-20)) ** k + 1)) ** (1 / k)) / (
+                                        (a ** k / (a ** k + 1)) ** (1 / k))
             self.time_sig *= peak_value
 
     def make_time_array(self, **kwargs):
@@ -289,10 +292,10 @@ class TestSignal():
                                                   self.FS, order, zero_phase=False)
             elif filt_type == "HP (zero phase)":
                 self.time_sig = ac.signal.highpass(self.time_sig, frequency,
-                                                   self.FS, order//2, zero_phase=True)  # workaround for bug
+                                                   self.FS, order // 2, zero_phase=True)  # workaround for bug
             elif filt_type == "LP (zero phase)":
                 self.time_sig = ac.signal.lowpass(self.time_sig, frequency,
-                                                  self.FS, order//2, zero_phase=True)  # workaround for bug
+                                                  self.FS, order // 2, zero_phase=True)  # workaround for bug
             elif filt_type == "Disabled":
                 pass
             else:
@@ -302,11 +305,11 @@ class TestSignal():
         n_fade_window = int(min(self.FS / 10, self.T * self.FS / 4))
 
         # Fade in
-        self.time_sig[:n_fade_window] =\
+        self.time_sig[:n_fade_window] = \
             self.time_sig[:n_fade_window] * make_fade_window_n(0, 1, n_fade_window)
 
         # Fade out
-        self.time_sig[len(self.time_sig) - n_fade_window:] =\
+        self.time_sig[len(self.time_sig) - n_fade_window:] = \
             self.time_sig[len(self.time_sig) - n_fade_window:] * make_fade_window_n(1, 0, n_fade_window)
 
         self.applied_fade_in_duration = f"{n_fade_window / self.FS * 1000:.0f}ms"
@@ -329,7 +332,7 @@ def make_fade_window_n(level_start, level_end, N_total, fade_start_end_idx=None)
 
     if N_total > 1:
         k = 1 / (N_fade - 1)
-        fade_window = (level_start**2 + k * np.arange(N_fade) * (level_end**2 - level_start**2))**0.5
+        fade_window = (level_start ** 2 + k * np.arange(N_fade) * (level_end ** 2 - level_start ** 2)) ** 0.5
         total_window = np.empty(N_total)
 
         if fade_start_idx > 0:
@@ -346,13 +349,13 @@ def make_fade_window_n(level_start, level_end, N_total, fade_start_end_idx=None)
         if fade_start_idx < N_total and fade_end_idx > 0:
             # some part of the fade window is falling into our [0:N_total] range
             if fade_start_idx >= 0:
-                total_window[fade_start_idx:fade_end_idx] = fade_window[:N_total-fade_start_idx]
+                total_window[fade_start_idx:fade_end_idx] = fade_window[:N_total - fade_start_idx]
             elif N_total > fade_end_idx:
                 # fade starts before our output starts and ends within our output
-                total_window[:fade_end_idx] = fade_window[(0 - fade_start_idx):(fade_end_idx-fade_start_idx)]
+                total_window[:fade_end_idx] = fade_window[(0 - fade_start_idx):(fade_end_idx - fade_start_idx)]
             else:
                 # fade starts before our output starts and extends further then the end of our output
-                total_window[:] = fade_window[(0 - fade_start_idx):(N_total-fade_start_idx)]
+                total_window[:] = fade_window[(0 - fade_start_idx):(N_total - fade_start_idx)]
 
     elif N_total <= 1:
         total_window = np.zeros(N_total)
@@ -406,7 +409,7 @@ def test_make_fade_window_n():
     for i, param in enumerate(params):
         print(f"Calculating n for param {param}")
         a = make_fade_window_n(*param)
-        plt.plot(a**2)
+        plt.plot(a ** 2)
         plt.title(f"Test n {i + 1}: {param}")
         plt.grid()
         plt.show()
@@ -432,7 +435,7 @@ def test_make_fade_window_t():
     for i, param in enumerate(params):
         print(f"Calculating t for param {param}")
         a = make_fade_window_t(*param)
-        plt.plot(a**2)
+        plt.plot(a ** 2)
         plt.title(f"Test t {i + 1}: {param}")
         plt.show()
 
@@ -441,7 +444,7 @@ class Curve:
     """
     Item holding a 2D line and information with it such as:
         a dictionary called identification, that holds name, prefix, suffix
-    """  
+    """
 
     def __init__(self, initial_data):
         self._identification = {"prefix": "", "base": "", "suffixes": []}
@@ -469,7 +472,7 @@ class Curve:
     def is_Klippel(self, import_text):
         return (True if (import_text[:18] == "SourceDesc='dB-Lab") else False)
 
-    def set_reference(self, reference:bool):
+    def set_reference(self, reference: bool):
         self._reference = reference
 
     def is_reference(self):
@@ -479,52 +482,51 @@ class Curve:
         # Process the imported text
         self.klippel_attrs = {"unresolved_attrs": []}
         attrs = import_text.split(";")
+        attrs = [attr.strip() for attr in attrs if len(attr) > 2]
 
-        usable_attrs = [attr.strip() for attr in attrs if (isinstance(attr, str) and len(attr) > 1)]
-
-        for attr in usable_attrs:
+        for attr in attrs:
             # Process any comment lines in the text
-            attr_mod = attr
-            lines = attr_mod.splitlines()
+            lines = attr.splitlines()
+            attr_mod = ""
             for i, line in enumerate(lines):
-                if len(lines) == i or line[0] != "%":
+                if line[0] == "%":
+                    continue
+                else:
                     attr_mod = "\n".join(lines[i:])
                     break
-                else:
-                    self.klippel_attrs["unresolved_attrs"].append(line)
 
             # Process the variables
             try:
-                left, *rights = attr_mod.split("=")
-                if len(left) > 1:  # Is it a valid parameter definition?
-                    key = left.strip()
-                    value = "=".join(rights).strip().strip("'")
+                left, right = attr_mod.split("=", 1)
+                if not left:
+                    continue
 
-                # Is it an array???
-                if all([key in value for key in ("\n", "[", "]")]):
+                key = left.strip()
+                value = right.strip().strip("'")
+
+                if key in self.klippel_attrs.keys():
+                    logger.error("Key already exists among the parameters somehow...")
+                    continue
+
+                if all([key in value for key in ("\n", "[", "]")]):  # looks like an array
                     array = np.genfromtxt(value.removeprefix("[").removesuffix("]").strip().splitlines(),
                                           delimiter="\t",
                                           autostrip=True
                                           )
                     self.klippel_attrs[key] = array
                     logger.info(f"Array imported with shape: {array.shape}")
-                elif key not in self.klippel_attrs.keys():
+                else:  # looks like single value
                     self.klippel_attrs[key] = value
-                else:
-                    logger.error("Key already exists among the parameters somehow...")
 
             except Exception as e:
                 logger.info("Was not able to extract data from string. Error: " + str(e))
                 logger.info("\nString:")
                 logger.info("\n" + attr_mod)
 
-        # Process the keys
+        # Process the collected data
         for key, val in self.klippel_attrs.items():
             if key == "Curve":
                 self.set_xy(np.array(val, dtype=float)[:, :2])
-                # randomize for testing
-                # x, y = self.get_xy()
-                # self.set_xy((x, y + np.random.randint(0, high=21)))
             elif key == "Data_Legend":
                 self.set_name_base(val)
 
@@ -714,17 +716,17 @@ def is_logarithmically_spaced(arr: tuple, rtol=1e-02) -> bool:
     if len(arr) < 2:
         # An array with fewer than 2 elements cannot determine spacing
         return False
-    
+
     # Convert to a NumPy array for easier calculations
     arr = np.array(arr, dtype=float)
-    
+
     # Check for invalid values (e.g., zero or negative values)
     if np.any(arr <= 0):
         return False
-    
+
     # Compute the ratio of consecutive elements
     ratios = arr[1:] / arr[:-1]
-    
+
     # Check if all ratios are approximately equal (tolerance for floating-point errors)
     return np.allclose(ratios, np.median(ratios), rtol=rtol)
 
@@ -745,13 +747,13 @@ def is_linearly_spaced(arr: tuple, rtol=1e-02) -> bool:
     if len(arr) < 2:
         # An array with fewer than 2 elements cannot determine spacing
         return False
-    
+
     # Convert to a NumPy array for easier calculations
     arr = np.array(arr, dtype=float)
-    
+
     # Compute the differences of consecutive elements
     diffs = arr[1:] - arr[:-1]
-    
+
     # Check if all differences are approximately equal (tolerance for floating-point errors)
     return np.allclose(diffs, np.median(diffs), rtol=rtol)
 
@@ -763,16 +765,17 @@ def check_if_sorted_and_valid(frequencies: tuple):
     # ---- validate size
     if array.size < 2:
         raise ValueError(("Curve needs to have more than one frequency point."
-                         f"Frequency points: {frequencies}"))
+                          f"Frequency points: {frequencies}"))
 
     is_sorted = lambda a: np.all(a[:-1] < a[1:])
     if not is_sorted(array):
         raise ValueError(f"Frequency points are not sorted: {array}")
     if array[0] <= 0:
-        raise ValueError(f"Negatives or zeros are not accepted as frequency points: '{array[0]}' found at start of array.")
-    
+        raise ValueError(
+            f"Negatives or zeros are not accepted as frequency points: '{array[0]}' found at start of array.")
+
     logger.info("Array verified as sorted and valid.")
-        
+
 
 def discover_fs_from_time_signature(curve):
     if not any(["[ms]" in string for string in curve.klippel_attrs["unresolved_parts"]]):
@@ -786,14 +789,14 @@ def discover_fs_from_time_signal(x):
         my_x = np.array(x) / 1000  # unit was in ms
     else:
         my_x = np.array(x)  # unit was in s
-    
+
     if is_linearly_spaced(x) is False:
         raise ValueError("Time signal is not linearly spaced.")
 
-    return int( (len(x) - 1) / (my_x[-1] - my_x[0]) )
+    return int((len(x) - 1) / (my_x[-1] - my_x[0]))
 
 
-def check_level_over_time(y, FS, window_duration:int=200, step_duration:int=50):
+def check_level_over_time(y, FS, window_duration: int = 200, step_duration: int = 50):
     "Assume a minimum frequency of 10Hz. To cover 10Hz at least 2 times, window length is chosen as 200ms"
     "window and step durations are both in ms"
     win = sig.windows.hamming(int(FS * window_duration / 1000))
@@ -825,8 +828,8 @@ def convolve_with_signal(ir, my_sig, ir_FS=None, my_sig_FS=None, trim_zeros=True
             raise TypeError("Invalid impulse response data. Please use export tab in settings to export.")
         if not ir.klippel_attrs["SourceDesc"] == "Windowed Impulse Response":
             logger.warning("Suggested to use 'Windowed Impulse Response'"
-                            f" instead of current '{ir.SourceDesc}'!"
-                            )
+                           f" instead of current '{ir.SourceDesc}'!"
+                           )
         y1 = ir.get_xy[1]
         y1_FS = discover_fs_from_time_signature(ir)
 
@@ -896,20 +899,20 @@ def generate_log_spaced_freq_list(freq_start, freq_end, ppo, must_include_freq=1
     if freq_start * freq_end * must_include_freq == 0:
         raise ValueError("Cannot use 0 Hz as a valid frequency point for octave spacing.")
     if superset:
-        numStart = np.floor(np.log2(freq_start/must_include_freq)*ppo)
-        numEnd = np.ceil(np.log2(freq_end/must_include_freq)*ppo)
+        numStart = np.floor(np.log2(freq_start / must_include_freq) * ppo)
+        numEnd = np.ceil(np.log2(freq_end / must_include_freq) * ppo)
     else:
-        numStart = np.ceil(np.log2(freq_start/must_include_freq)*ppo)
-        numEnd = np.floor(np.log2(freq_end/must_include_freq)*ppo)
-    freq_array = must_include_freq*np.array(2**(np.arange(numStart, numEnd + 1)/ppo))
+        numStart = np.ceil(np.log2(freq_start / must_include_freq) * ppo)
+        numEnd = np.floor(np.log2(freq_end / must_include_freq) * ppo)
+    freq_array = must_include_freq * np.array(2 ** (np.arange(numStart, numEnd + 1) / ppo))
     return freq_array
 
 
 def smooth_curve_rectangular_no_interpolation(x, y, bandwidth=3, ndarray=False):
     y_filt = np.zeros(len(x), dtype=float)
-    y_power = 10**(y / 10)
+    y_power = 10 ** (y / 10)
     for i, freq in enumerate(x):
-        f_critical = freq * 2**(-1 / 2 / bandwidth), freq * 2**(1 / 2 / bandwidth)
+        f_critical = freq * 2 ** (-1 / 2 / bandwidth), freq * 2 ** (1 / 2 / bandwidth)
         # https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.butter.html#scipy.signal.butter
         i_start = np.searchsorted(x, f_critical[0])
         i_end = np.searchsorted(x, f_critical[1], side="right")
@@ -929,13 +932,13 @@ def smooth_curve_gaussian(x, y, bandwidth=3, resolution=96, ndarray=False):
 
 def smooth_curve_butterworth(x, y, bandwidth=3, order=8, ndarray=False, FS=None):
     if not FS:
-        FS = 48000 * 2**((x[-1] * 3) // 48000)  # no input frequencies above 2/3 of Nyquist freq.
+        FS = 48000 * 2 ** ((x[-1] * 3) // 48000)  # no input frequencies above 2/3 of Nyquist freq.
     else:
         pass
 
     y_filt = np.zeros(len(x), dtype=float)
     for i, freq in enumerate(x):
-        f_critical = freq * 2**(-1 / 2 / bandwidth), x[-1], freq * 2**(1 / 2 / bandwidth)
+        f_critical = freq * 2 ** (-1 / 2 / bandwidth), x[-1], freq * 2 ** (1 / 2 / bandwidth)
         if f_critical[0] < x[0] or f_critical[1] > x[-1]:
             y_filt[i] = np.nan
         else:
@@ -943,7 +946,7 @@ def smooth_curve_butterworth(x, y, bandwidth=3, order=8, ndarray=False, FS=None)
             sos = sig.butter(order, f_critical, btype="bandpass", output="sos", fs=FS)
             _, filtering_array = sig.sosfreqz(sos, x, fs=FS)
             filtering_array_abs = np.abs(filtering_array)
-            filtered_array_of_power = 10**(np.array(y) / 10) * filtering_array_abs / np.sum(filtering_array_abs)
+            filtered_array_of_power = 10 ** (np.array(y) / 10) * filtering_array_abs / np.sum(filtering_array_abs)
             # in above line instead of the division by the sum, division by "resolution * bandwidth"
             # should also have worked but has some offset in it..
             y_filt[i] = 10 * np.log10(np.sum(filtered_array_of_power))
@@ -953,14 +956,14 @@ def smooth_curve_butterworth(x, y, bandwidth=3, order=8, ndarray=False, FS=None)
 
 def smooth_log_spaced_curve_butterworth(x, y, bandwidth=3, resolution=96, order=8, ndarray=False, FS=None):
     if not FS:
-        FS = 48000 * 2**((x[-1] * 3) // 48000)  # no input frequencies above 2/3 of Nyquist freq.
+        FS = 48000 * 2 ** ((x[-1] * 3) // 48000)  # no input frequencies above 2/3 of Nyquist freq.
     else:
         pass
     x_intp, y_intp = interpolate_to_ppo(x, y, resolution)
 
     y_filt = np.zeros(len(x_intp), dtype=float)
     for i, freq in enumerate(x_intp):
-        f_critical = freq * 2**(-1 / 2 / bandwidth), freq * 2**(1 / 2 / bandwidth)
+        f_critical = freq * 2 ** (-1 / 2 / bandwidth), freq * 2 ** (1 / 2 / bandwidth)
         if f_critical[0] < x_intp[0] or f_critical[1] > x_intp[-1]:
             y_filt[i] = np.nan
         else:
@@ -968,7 +971,7 @@ def smooth_log_spaced_curve_butterworth(x, y, bandwidth=3, resolution=96, order=
             sos = sig.butter(order, f_critical, btype="bandpass", output="sos", fs=FS)
             _, filtering_array = sig.sosfreqz(sos, x_intp, fs=FS)
             filtering_array_abs = np.abs(filtering_array)
-            filtered_array_of_power = 10**(y_intp/10) * filtering_array_abs / np.sum(filtering_array_abs)
+            filtered_array_of_power = 10 ** (y_intp / 10) * filtering_array_abs / np.sum(filtering_array_abs)
             # in above line instead of the division by the sum, division by "resolution * bandwidth"
             # should also have worked but has some offset in it..
             y_filt[i] = 10 * np.log10(np.sum(filtered_array_of_power))
@@ -978,7 +981,7 @@ def smooth_log_spaced_curve_butterworth(x, y, bandwidth=3, resolution=96, order=
 
 def smooth_log_spaced_curve_butterworth_fast(x, y, bandwidth=3, resolution=96, order=8, ndarray=False, FS=None):
     if not FS:
-        FS = 48000 * 2**((x[-1] * 3) // 48000)  # no input frequencies above 2/3 of Nyquist freq.
+        FS = 48000 * 2 ** ((x[-1] * 3) // 48000)  # no input frequencies above 2/3 of Nyquist freq.
     else:
         pass
     x_intp, y_intp = interpolate_to_ppo(x, y, resolution)
@@ -986,7 +989,8 @@ def smooth_log_spaced_curve_butterworth_fast(x, y, bandwidth=3, resolution=96, o
     y_filt = np.zeros(len(x_intp), dtype=float)
     i_for_bandpass_calculation = int(len(y_filt) / 2)
     freq_for_bandpass_calculation = x_intp[i_for_bandpass_calculation]
-    f_critical = (freq_for_bandpass_calculation * 2**(-1/2/bandwidth), freq_for_bandpass_calculation * 2**(1/2/bandwidth))
+    f_critical = (freq_for_bandpass_calculation * 2 ** (-1 / 2 / bandwidth),
+                  freq_for_bandpass_calculation * 2 ** (1 / 2 / bandwidth))
     sos = sig.butter(order, f_critical, btype="bandpass", output="sos", fs=FS)
     filter_response = np.abs(sig.sosfreqz(sos, x_intp, fs=FS)[1])
     filter_response = filter_response
@@ -1001,8 +1005,8 @@ def smooth_log_spaced_curve_butterworth_fast(x, y, bandwidth=3, resolution=96, o
         i_read_end = min(len(x_intp), len(x_intp) - offset)
 
         shifted_filter_response[i_write_start:i_write_end] = filter_response[i_read_start:i_read_end]
-        filtered_array_of_power = 10**(y_intp/10) * shifted_filter_response / np.sum(shifted_filter_response)
-        
+        filtered_array_of_power = 10 ** (y_intp / 10) * shifted_filter_response / np.sum(shifted_filter_response)
+
         y_filt[i_filter_position] = 10 * np.log10(np.sum(filtered_array_of_power))
 
     return np.column_stack((x_intp, y_filt)) if ndarray else x_intp, y_filt
@@ -1014,11 +1018,11 @@ def interpolate_to_ppo(x, y, ppo, must_include_freq=1000, superset=False):
     """
     freq_start, freq_end = x[0], x[-1]
     freqs = generate_log_spaced_freq_list(freq_start,
-                               freq_end,
-                               ppo,
-                               must_include_freq=must_include_freq,
-                               superset=superset,
-                               )
+                                          freq_end,
+                                          ppo,
+                                          must_include_freq=must_include_freq,
+                                          superset=superset,
+                                          )
 
     f = intp.interp1d(np.log(x), y, assume_sorted=True, bounds_error=False)
     return freqs, f(np.log(freqs))
@@ -1060,14 +1064,14 @@ def curve_summation(curves_xy: list) -> Curve:
     all_x_values = sorted(list(set(tuple(curves_xy[0].get_x()) + tuple(curves_xy[1].get_x()))))
     y0_interp = intp.interp1d(curves_xy[0].get_x(), curves_xy[0].get_y(), assume_sorted=True, bounds_error=False)
     y1_interp = intp.interp1d(curves_xy[1].get_x(), curves_xy[1].get_y(), assume_sorted=True, bounds_error=False)
-    
+
     y0 = y0_interp(all_x_values)
     y1 = y1_interp(all_x_values)
-    
+
     # Sum
     xy_sum = np.array([all_x_values, y0 + y1]).T
     xy_sum = xy_sum[~np.isnan(xy_sum).any(axis=1)]
-    
+
     # Difference
     xy_diff = np.array([all_x_values, y0 - y1]).T
     xy_diff = xy_diff[~np.isnan(xy_diff).any(axis=1)]
@@ -1077,17 +1081,19 @@ def curve_summation(curves_xy: list) -> Curve:
     return (
         Curve(xy_sum),
         Curve(xy_diff),
-        )
+    )
 
 
 def calculate_average(curve: Curve, f_min: float, f_max: float, logarithmic: bool) -> float:
     xy = curve.get_xy(ndarray=True)
 
     if f_min < xy[0][0]:
-        raise ValueError(f"Requested minimum frequency for average calculation range is out of bounds for curve '{curve.get_full_name()}'.")
+        raise ValueError(
+            f"Requested minimum frequency for average calculation range is out of bounds for curve '{curve.get_full_name()}'.")
     if f_max > xy[0][-1]:
-        raise ValueError(f"Requested maximum frequency for average calculation range is out of bounds for curve '{curve.get_full_name()}'.")
-        
+        raise ValueError(
+            f"Requested maximum frequency for average calculation range is out of bounds for curve '{curve.get_full_name()}'.")
+
     if logarithmic:
         f_norm_min = np.log(f_min)
         f_norm_max = np.log(f_max)
@@ -1096,17 +1102,18 @@ def calculate_average(curve: Curve, f_min: float, f_max: float, logarithmic: boo
         f_norm_min = f_min
         f_norm_max = f_max
         x_norm = curve.get_x()
-        
+
     y = curve.get_y()
     y_interp = intp.interp1d(x_norm, y, assume_sorted=True)
 
     edge_norm_values = np.array([[f_norm_min, f_norm_max],
-                                [y_interp(f_norm_min), y_interp(f_norm_max)],
-                                ])
+                                 [y_interp(f_norm_min), y_interp(f_norm_max)],
+                                 ])
     xy_norm = np.vstack([x_norm, y])
     xy_norm_reduced = xy_norm[:, (xy_norm[0, :] > f_norm_min) & (xy_norm[0, :] < f_norm_max)]
-    xy_norm = np.hstack((edge_norm_values[:, 0:1], xy_norm_reduced, edge_norm_values[:, 1:2]))  # add f_norm_min and f_norm_max value
-    
+    xy_norm = np.hstack(
+        (edge_norm_values[:, 0:1], xy_norm_reduced, edge_norm_values[:, 1:2]))  # add f_norm_min and f_norm_max value
+
     return np.trapezoid(xy_norm[1], x=xy_norm[0]) / (f_norm_max - f_norm_min)
 
 
@@ -1122,7 +1129,6 @@ def iqr_analysis(curves_xy: dict, outlier_fence_iqr, f_min=0, f_max=np.inf):
     mask_rows = (x_array_no_filt > f_min) & (x_array_no_filt < f_max)
     x_array = x_array_no_filt[mask_rows]
     y_arrays = y_arrays_no_filt[mask_rows, :]
-    
 
     q1, median, q3 = np.percentile(y_arrays, (25, 50, 75), axis=1, method='median_unbiased')
     iqr = q3 - q1
@@ -1140,11 +1146,10 @@ def iqr_analysis(curves_xy: dict, outlier_fence_iqr, f_min=0, f_max=np.inf):
         Curve((x_array, lower_fence)),
         Curve((x_array, upper_fence)),
         outliers_indexes
-        )
+    )
 
 
 def calculate_graph_limits(y_arrays, multiple=5, clearance_up_down=(2, 1)) -> tuple:
-
     def floor_to_multiple(number, multiple, clearance_down):
         return multiple * np.floor((number - clearance_down) / multiple)
 
@@ -1160,8 +1165,10 @@ def calculate_graph_limits(y_arrays, multiple=5, clearance_up_down=(2, 1)) -> tu
     else:
         return None, None
 
+
 def third_octave_power(sig, FS, center_frequencies):
-    return tuple(10**(ac.signal.third_octaves(sig, FS, frequencies=center_frequencies)[1] / 10))
+    return tuple(10 ** (ac.signal.third_octaves(sig, FS, frequencies=center_frequencies)[1] / 10))
+
 
 def calculate_3rd_octave_bands(time_sig: np.array, FS: int, multiprocess=True) -> tuple:
     start_time = time.perf_counter()
@@ -1171,8 +1178,8 @@ def calculate_3rd_octave_bands(time_sig: np.array, FS: int, multiprocess=True) -
     logging.debug(f"Calculating octave bands by dividing {len(time_sig)} points signal into {n_arrays} pieces.")
     arrays = np.array_split(time_sig, n_arrays)
     third_oct_pows_array = np.empty((n_arrays, len(center_frequencies)))
-    
-    if multiprocess:       
+
+    if multiprocess:
         with multiprocessing.Pool(processes=None) as p:  # None means use as many processes as cpu count
             third_oct_pows = p.starmap(third_octave_power, [(array, FS, center_frequencies) for array in arrays])
     else:
