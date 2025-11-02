@@ -521,7 +521,7 @@ class Curve:
         # Process the keys
         for key, val in self.klippel_attrs.items():
             if key == "Curve":
-                self.set_xy(np.array(val)[:, :2])
+                self.set_xy(np.array(val, dtype=float)[:, :2])
                 # randomize for testing
                 # x, y = self.get_xy()
                 # self.set_xy((x, y + np.random.randint(0, high=21)))
@@ -584,8 +584,8 @@ class Curve:
                 x = tuple(float(part[0]) for part in parts)
                 y = [float(part[1]) for part in parts]
                 self._check_if_sorted_and_valid(x)
-                setattr(self, "_x", np.array(x))
-                setattr(self, "_y", np.array(y))
+                setattr(self, "_x", np.array(x, dtype=float))
+                setattr(self, "_y", np.array(y, dtype=float))
                 setattr(self, "_xy", np.vstack([self._x, self._y]))
 
             if i_start == 1:  # first row must be title row
