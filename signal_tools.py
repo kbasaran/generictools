@@ -606,7 +606,7 @@ class Curve:
             # (2, N) shaped
             return getattr(self, "_xy", None).copy()
         else:
-            self.get_x(), self.get_y()
+            return self.get_x(), self.get_y()
 
     def get_x(self):
         return getattr(self, "_x", None).copy()
