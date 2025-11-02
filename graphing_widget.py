@@ -65,19 +65,12 @@ class MatplotlibWidget(qtw.QWidget):
         self.ax = self.canvas.figure.subplots()
         self._setup_grid()
 
-        # https://matplotlib.org/stable/api/_as_gen/matplotlib._lines.line2d.html
-        
-        # Print info continuously
-        # timer = qtc.QTimer(self)
-        # timer.timeout.connect(self.print_line_states)
-        # timer.start(2000)
-
     @qtc.Slot()
     def _setup_grid(self):
         self.ax.grid(visible=False, which="both", axis='both')
 
-        if self.app_settings.graph_grids == "default":
-            visible = plt.rcParams["axes.grid"]
+        if self.app_settings.graph_grids in ["Style default", "default"]:
+            visible = plt.rcParams["axes.grid"]  # boolean
             axis = plt.rcParams["axes.grid.axis"]
             which = plt.rcParams["axes.grid.which"]
             self.ax.grid(visible=visible, which=which, axis=axis)
