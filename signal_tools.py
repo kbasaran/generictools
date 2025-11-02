@@ -534,7 +534,7 @@ class Curve:
                 self._check_if_sorted_and_valid(tuple(xy[0, :]))
                 setattr(self, "_x", xy[0, :])
                 setattr(self, "_y", xy[1, :])
-                setattr(self, "_xy", xy)
+                setattr(self, "_xy", xy.copy())
             elif xy.shape[1] == 2:
                 self._check_if_sorted_and_valid(tuple(xy[:, 0]))
                 setattr(self, "_x", xy[:, 0])
@@ -602,15 +602,15 @@ class Curve:
     def get_xy(self, ndarray=False):
         if ndarray:
             # (2, N) shaped
-            return getattr(self, "_xy", None)
+            return getattr(self, "_xy", None).copy()
         else:
-            return getattr(self, "_x", None), getattr(self, "_y", None)
+            self.get_x(), self.get_y()
 
     def get_x(self):
-        return getattr(self, "_x", None)
+        return getattr(self, "_x", None).copy()
 
     def get_y(self):
-        return getattr(self, "_y", None)
+        return getattr(self, "_y", None).copy()
 
     def export_to_clipboard(self, **interpolate_to_ppo_kwargs):
         if not interpolate_to_ppo_kwargs:
