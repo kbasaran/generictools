@@ -336,6 +336,7 @@ class MatplotlibWidget(qtw.QWidget):
         line_indexes_in_qlist_order = self._get_line_indexes_in_qlist_order()
         return [self.ax.get_lines()[i] for i in line_indexes_in_qlist_order]
 
+    @qtc.Slot()
     def get_visible_lines_in_qlist_order(self):
         """
         Same with get_lines_in_qlist_order, but return only visible lines.
