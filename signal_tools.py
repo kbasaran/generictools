@@ -480,7 +480,7 @@ class Curve:
 
     def _extract_klippel_parameters(self, import_text):
         # Process the imported text
-        self.klippel_attrs = {"unresolved_attrs": []}
+        self.klippel_attrs = {}
         attrs = import_text.split(";")
         attrs = [attr.strip() for attr in attrs if len(attr) > 2]
 
