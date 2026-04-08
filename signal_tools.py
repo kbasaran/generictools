@@ -979,7 +979,22 @@ def smooth_log_spaced_curve_butterworth(x, y, bandwidth=3, resolution=96, order=
     return np.column_stack((x_intp, y_filt)) if ndarray else x_intp, y_filt
 
 
-def smooth_log_spaced_curve_butterworth_fast(x, y, bandwidth=3, resolution=96, order=8, ndarray=False, FS=None):
+def smooth_log_spaced_curve_butterworth_fast(x, y, bandwidth=3, resolution=96, order=8, as_array=False, FS=None):
+    """
+    Parameters
+    ----------
+    x
+    y
+    bandwidth
+    resolution
+    order
+    as_array: return a Nx2 array. If False, return a tuple for x and y.
+    FS
+
+    Returns
+    -------
+
+    """
     if not FS:
         FS = 48000 * 2 ** ((x[-1] * 3) // 48000)  # no input frequencies above 2/3 of Nyquist freq.
     else:
@@ -1009,7 +1024,10 @@ def smooth_log_spaced_curve_butterworth_fast(x, y, bandwidth=3, resolution=96, o
 
         y_filt[i_filter_position] = 10 * np.log10(np.sum(filtered_array_of_power))
 
-    return np.column_stack((x_intp, y_filt)) if ndarray else x_intp, y_filt
+    if as_array:
+        return np.column_stack((x_intp, y_filt))
+    else:
+        return x_intp, y_filt
 
 
 def interpolate_to_ppo(x, y, ppo, must_include_freq=1000, superset=False):
