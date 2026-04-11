@@ -13,7 +13,7 @@ layout.addWidget(label)
 mw.setLayout(layout)
 
 
-app_definitions = {"app_name": "Linecraft",
+APP_DEFINITIONS = {"app_name": "Linecraft",
                    "version": "0.3.0rc0",
                    # "version": "Test build " + today.strftime("%Y.%m.%d"),
                    "description": "Linecraft - Frequency response plotting and statistics",
@@ -25,15 +25,15 @@ app_definitions = {"app_name": "Linecraft",
                    "website": "https://github.com/kbasaran",
                    }
 
-settings_storage_title = (app_definitions["app_name"]
+settings_storage_title = (APP_DEFINITIONS["app_name"]
                           + " v"
-                          + (".".join(app_definitions["version"].split(".")[:2])
-                             if "." in app_definitions["version"]
+                          + (".".join(APP_DEFINITIONS["version"].split(".")[:2])
+                             if "." in APP_DEFINITIONS["version"]
                              else "???"
                              )
                           )
 
-settings = qtc.QSettings(app_definitions["author_short"], settings_storage_title)
+settings = qtc.QSettings(APP_DEFINITIONS["author_short"], settings_storage_title)
 
 label_text = f"Storage title: {settings_storage_title}\n"
 label_text += "Data:\n\n"
