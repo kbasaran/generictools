@@ -10,11 +10,11 @@ from matplotlib.backends.backend_qtagg import (
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 
-import matplotlib
-matplotlib.rcParams['savefig.format'] = 'svg'
-
 from config.app_config import singleton_settings
 app_settings = singleton_settings()
+
+import matplotlib
+matplotlib.rcParams['savefig.format'] = 'svg'
 
 import logging
 if __name__ == "__main__":
@@ -46,7 +46,7 @@ class MatplotlibWidget(qtw.QWidget):
         self.set_y_limits_policy(None)
 
         # ---- Set the desired style
-        desired_style = app_settings.get_value["matplotlib_style"]
+        desired_style = app_settings.get_value("matplotlib_style")
         if desired_style in plt.style.available:
             plt.style.use(desired_style)
         else:
