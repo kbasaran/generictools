@@ -33,15 +33,16 @@ settings_storage_title = (APP_DEFINITIONS["app_name"]
                              )
                           )
 
-settings = qtc.QSettings(APP_DEFINITIONS["author_short"], settings_storage_title)
+app_settings = qtc.QSettings(APP_DEFINITIONS["author_short"], settings_storage_title)
 
 label_text = f"Storage title: {settings_storage_title}\n"
 label_text += "Data:\n\n"
-for key in settings.allKeys():
-    label_text += f"{key}: {type(settings.value(key))}, value: {settings.value(key)}\n"
+for key, val in app_settings.get_all_as_dict().items():
+    label_text += f"{key}: {type(app_settings.value(key))}, value: {app_settings.value(key)}\n"
+
 
 # Clear settings
-settings.clear()
+app_settings.clear()
 label_text += "\nAll stored settings cleared."
 
 label.setText(label_text)

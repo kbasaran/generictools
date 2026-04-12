@@ -27,6 +27,9 @@ import numpy as np
 from generictools import signal_tools
 import pickle
 
+from config.app_config import singleton_settings
+app_settings = singleton_settings()
+
 import logging
 if __name__ == "__main__":
     logger = logging.getLogger(__name__)
@@ -355,9 +358,8 @@ class UserForm(qtw.QWidget):
 
 
 class SoundEngine(qtc.QObject):
-    def __init__(self, settings):
+    def __init__(self):
         super().__init__()
-        self.app_settings = settings
         self.verify_stream()
 
     def verify_stream(self):
@@ -386,11 +388,11 @@ class SoundEngine(qtc.QObject):
 
     @qtc.Slot()
     def good_beep(self):
-        self.beep(self.app_settings.A_beep / 2, 0.1, 587.3)
+        self.beep(app_settings.get_value("A_beep") / 2, 0.1, 587.3)
 
     @qtc.Slot()
     def bad_beep(self):
-        self.beep(self.app_settings.A_beep, 0.1, 293.7)
+        self.beep(app_settings.get_value("A_beep"), 0.1, 293.7)
 
     @qtc.Slot()
     def release_all(self):

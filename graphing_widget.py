@@ -13,6 +13,9 @@ from matplotlib.figure import Figure
 import matplotlib
 matplotlib.rcParams['savefig.format'] = 'svg'
 
+from config.app_config import singleton_settings
+app_settings = singleton_settings()
+
 import logging
 if __name__ == "__main__":
     logger = logging.getLogger(__name__)
@@ -35,8 +38,7 @@ class MatplotlibWidget(qtw.QWidget):
         for i, line in enumerate(self.get_lines_in_qlist_order()):
             print(i, line.get_label(), line.get_zorder())
 
-    def __init__(self, settings, layout_engine="constrained"):
-        self.app_settings = settings
+    def __init__(self, layout_engine="constrained"):
         super().__init__()
         layout = qtw.QVBoxLayout(self)
         self._ref_index_x_y = None
@@ -44,7 +46,7 @@ class MatplotlibWidget(qtw.QWidget):
         self.set_y_limits_policy(None)
 
         # ---- Set the desired style
-        desired_style = self.app_settings.matplotlib_style
+        desired_style = app_settings.get_value["matplotlib_style"]
         if desired_style in plt.style.available:
             plt.style.use(desired_style)
         else:
@@ -69,16 +71,16 @@ class MatplotlibWidget(qtw.QWidget):
     def _setup_grid(self):
         self.ax.grid(visible=False, which="both", axis='both')
 
-        if self.app_settings.graph_grids in ["Style default", "default"]:
+        if app_settings.get_value("graph_grids") in ["Style default", "default"]:
             visible = plt.rcParams["axes.grid"]  # boolean
             axis = plt.rcParams["axes.grid.axis"]
             which = plt.rcParams["axes.grid.which"]
             self.ax.grid(visible=visible, which=which, axis=axis)
 
         else:
-            if "ajor" in self.app_settings.graph_grids:
+            if "ajor" in app_settings.get_value("graph_grids"):
                 self.ax.grid(visible=True, which="major", axis='both')
-            if "inor" in self.app_settings.graph_grids:
+            if "inor" in app_settings.get_value("graph_grids"):
                 self.ax.grid(visible=True, which="minor", axis='both')
     
     def set_y_limits_policy(self, policy_name, **kwargs):
@@ -120,7 +122,7 @@ class MatplotlibWidget(qtw.QWidget):
 
                 line.set_zorder(n_lines - i + zorder_offset)
 
-            if self.ax.has_data() and getattr(self.app_settings, "show_legend", True):
+            if self.ax.has_data() and app_settings.get_value("show_legend"):
                 self._place_ordered_legend()
             elif legend := self.ax.get_legend():
                 legend.remove()
@@ -181,10 +183,10 @@ class MatplotlibWidget(qtw.QWidget):
         else:
             title = None
 
-        max_legend_size = getattr(self.app_settings, "max_legend_size", 0)
+        max_legend_size = app_settings.get_value("max_legend_size")
         if len(handles) > 0:
             if max_legend_size > 0:
-                handles = handles[:self.app_settings.max_legend_size]
+                handles = handles[:app_settings.get_value("max_legend_size")]
             self.ax.legend(handles=handles, title=title)
 
     @qtc.Slot()
