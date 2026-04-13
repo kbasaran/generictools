@@ -215,11 +215,18 @@ class ComboBox(qtw.QComboBox):
 
         return personalized_value
 
-    def update_value_personalized(self, key: str, value: dict):
-        existing_item_index = self.findText(value["current_text"])
+    def update_value_personalized(self, key: str, value: dict | str):
+        if isinstance(value, str):
+            in_current_text = value
+            in_current_data = None
+        else:
+            in_current_text = value["current_text"]
+            in_current_data = value.get("current_data", None)
+
+        existing_item_index = self.findText(in_current_text)
 
         logger.debug("Items in widget: " + str([(self.itemText(i), self.itemData(i)) for i in range(self.count())])
-                     + "\nNew text: " + str(value)
+                     + "\nNew value: " + str(value)
                      + "\nFound in index: " + str(existing_item_index)
                      )
 
@@ -227,16 +234,14 @@ class ComboBox(qtw.QComboBox):
             self.clear()
             # add all options from received argument
             items = value.get("items", [])
-            current_text = value["current_text"]
-            current_data = value.get("current_data", None)
 
             if items:
                 for item in items:
                     self.addItem(*item)
-                self.setCurrentText(current_text)
+                self.setCurrentText(in_current_text)
 
             else:  # otherwise add only the item of last selection
-                self.addItem(current_text, current_data)
+                self.addItem(in_current_text, in_current_data)
                 self.setCurrentIndex(0)
 
         else:  # the combobox already has this name as an item. set to it.
