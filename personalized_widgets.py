@@ -460,8 +460,16 @@ class ErrorHandlerDeveloper_old:
     
         message_box.exec()
 
+
 class ErrorPopup(qtw.QErrorMessage):
     def __init__(self, parent, error_msg):
+        if isinstance(parent, qtw.QApplication):
+            parent = parent.activeWindow()
+        elif parent is not None and not isinstance(parent, qtw.QWidget):
+            parent = None  # parent is likely top level QApplication
+        else:
+            parent = parent
+
         super().__init__(parent=parent)
         self.setModal(True)
         self.setMaximumWidth(640)
