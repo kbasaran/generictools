@@ -46,7 +46,7 @@ class MatplotlibWidget(qtw.QWidget):
         self.set_y_limits_policy(None)
 
         # ---- Set the desired style
-        desired_style = app_settings.get_value("matplotlib_style")["current_text"]
+        desired_style = app_settings.get_value("matplotlib_style")
         if desired_style in plt.style.available:
             plt.style.use(desired_style)
         else:
@@ -71,16 +71,16 @@ class MatplotlibWidget(qtw.QWidget):
     def _setup_grid(self):
         self.ax.grid(visible=False, which="both", axis='both')
 
-        if app_settings.get_value("graph_grids")["current_text"] in ["Style default", "default"]:
+        if app_settings.get_value("graph_grids") in ["Style default", "default"]:
             visible = plt.rcParams["axes.grid"]  # boolean
             axis = plt.rcParams["axes.grid.axis"]
             which = plt.rcParams["axes.grid.which"]
             self.ax.grid(visible=visible, which=which, axis=axis)
 
         else:
-            if "ajor" in app_settings.get_value("graph_grids")["current_text"]:
+            if "ajor" in app_settings.get_value("graph_grids"):
                 self.ax.grid(visible=True, which="major", axis='both')
-            if "inor" in app_settings.get_value("graph_grids")["current_text"]:
+            if "inor" in app_settings.get_value("graph_grids"):
                 self.ax.grid(visible=True, which="minor", axis='both')
     
     def set_y_limits_policy(self, policy_name, **kwargs):
