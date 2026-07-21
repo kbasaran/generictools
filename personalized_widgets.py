@@ -439,27 +439,6 @@ class ResultTextBox(qtw.QDialog):
         button_group.buttons()["ok_pushbutton"].clicked.connect(
             self.accept)
 
-class ErrorHandlerDeveloper_old:
-    def __init__(self, app, logger):
-        self.app = app
-    
-    def excepthook(self, etype, value, tb):
-        error_msg_developer = ''.join(traceback.format_exception(etype, value, tb))
-        message_box = qtw.QMessageBox(qtw.QMessageBox.Warning,
-                                      "Error    :(",
-                                      error_msg_developer +
-                                      "\n\nThis event may be logged unless ignore is chosen.",
-                                      )
-        message_box.addButton(qtw.QMessageBox.Ignore)
-        close_button = message_box.addButton(qtw.QMessageBox.Close)
-    
-        message_box.setEscapeButton(qtw.QMessageBox.Ignore)
-        message_box.setDefaultButton(qtw.QMessageBox.Close)
-    
-        close_button.clicked.connect(lambda: logger.warning(error_msg_developer))
-    
-        message_box.exec()
-
 
 class ErrorPopup(qtw.QMessageBox):
     def __init__(self, parent, error_msg):
