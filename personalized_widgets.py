@@ -219,9 +219,11 @@ class ComboBox(qtw.QComboBox):
         if isinstance(value, str):
             in_current_text = value
             in_current_data = None
-        else:
+        elif isinstance(value, dict):
             in_current_text = value["current_text"]
             in_current_data = value.get("current_data", None)
+        else:
+            raise ValueError(f"Cannot set combobox value with data type {type(value)}")
 
         existing_item_index = self.findText(in_current_text)
 
