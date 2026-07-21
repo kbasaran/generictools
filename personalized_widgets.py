@@ -456,25 +456,22 @@ class ErrorHandlerDeveloper_old:
         message_box.setEscapeButton(qtw.QMessageBox.Ignore)
         message_box.setDefaultButton(qtw.QMessageBox.Close)
     
-        close_button.clicked.connect(logger.warning(error_msg_developer))
+        close_button.clicked.connect(lambda: logger.warning(error_msg_developer))
     
         message_box.exec()
 
 
-class ErrorPopup(qtw.QErrorMessage):
+class ErrorPopup(qtw.QMessageBox):
     def __init__(self, parent, error_msg):
         if isinstance(parent, qtw.QApplication):
             parent = parent.activeWindow()
         elif parent is not None and not isinstance(parent, qtw.QWidget):
             parent = None  # parent is likely top level QApplication
-        else:
-            parent = parent
 
-        super().__init__(parent=parent)
-        self.setModal(True)
-        self.setMaximumWidth(640)
-        self.setMinimumHeight(480)
-        self.showMessage(error_msg)
+        super().__init__(qtw.QMessageBox.Warning, "Error    :(", error_msg, parent=parent)
+        self.setStandardButtons(qtw.QMessageBox.Close)
+        self.setDefaultButton(qtw.QMessageBox.Close)
+        self.exec()
 
 
 class ErrorHandler:
