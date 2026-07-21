@@ -456,37 +456,28 @@ class ErrorPopup(qtw.QMessageBox):
 
 
 class ErrorHandler:
-    def __init__(self, parent, logger, developer=False):
-        self.developer = developer
-        self.parent = parent
+    """Global exception handler: logs the error and shows a pop-up.
+
+    The pop-up's parent widget is resolved at error time via
+    QApplication.activeWindow(), rather than fixed at construction.
+    This works whether zero, one, or several windows are open, and
+    means we never need to pass QApplication itself as a widget parent.
+    """
+
+    def __init__(self, logger, developer=False):
         self.logger = logger
+        self.developer = developer
 
     def excepthook(self, etype, value, tb):
-        error_msg_developer = ''.join(traceback.format_exception(etype, value, tb))
         error_info = traceback.format_exception(etype, value, tb)
+        error_msg_developer = "".join(error_info)
+        error_msg_short = error_info[-1] if len(error_info) > 1 else error_msg_developer
 
-        if isinstance(error_info, list) and len(error_info) > 2:
-            error_msg_short = error_info[-1]
-            # bad solution
-        else:
-            error_msg_short = error_info
+        message = error_msg_developer if self.developer else error_msg_short
+        self.logger.warning(message)
 
-        if self.developer:
-            self.logger.warning(error_msg_developer)
-            ErrorPopup(self.parent, error_msg_developer)
-        else:
-            self.logger.warning(error_msg_short)
-            ErrorPopup(self.parent, error_msg_short)
-
-
-class ErrorHandlerUser(ErrorHandler):
-    def __init__(self, parent, logger):
-        super().__init__(parent, logger, developer=False)
-
-
-class ErrorHandlerDeveloper(ErrorHandler):
-    def __init__(self, parent, logger):
-        super().__init__(parent, logger, developer=True)
+        parent = qtw.QApplication.activeWindow()  # None is a valid parent too
+        ErrorPopup(parent, message)
 
 
 class LoadSaveEngine:
