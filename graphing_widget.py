@@ -91,6 +91,11 @@ class MatplotlibWidget(qtw.QWidget):
     def set_title(self, title):
         self.ax.set_title(title)
 
+    def get_x_axis_major(self, x_min, x_max):
+        start = 10 ** np.floor(np.log10(x_min))
+        end = 10 ** np.ceil(np.log10(x_max))
+
+
     @qtc.Slot()
     def update_figure(self, recalculate_limits=True, update_legend=True):
         start_time = time.perf_counter()
