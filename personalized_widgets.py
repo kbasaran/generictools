@@ -278,7 +278,6 @@ class UserForm(qtw.QWidget):
         if hasattr(obj, "add_elements_to_dict"):
             obj.add_elements_to_dict(self.interactable_widgets)
 
-
     def set_value(self, key, value_new):
 
         logger.debug(f"Updating '{key}' with '{value_new}'/{type(value_new)}")
@@ -305,7 +304,6 @@ class UserForm(qtw.QWidget):
 
         else:
             obj.setValue(value_new)
-
 
     def update_complete_form(self, values_new: dict):
         # Update the widget values from a dictionary
