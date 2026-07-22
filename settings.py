@@ -103,6 +103,11 @@ class SettingsManager(qtc.QObject):
         self.settings_changed.emit()
 
 
+def singleton_settings():
+    from config.linecraft_config import APP_DEFINITIONS, DEFAULTS
+    return SettingsManager(APP_DEFINITIONS, DEFAULTS)
+
+
 if __name__ == "__main__":
     pass
 else:

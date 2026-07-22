@@ -10,7 +10,7 @@ from matplotlib.backends.backend_qtagg import (
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 
-from config.linecraft_config import singleton_settings
+from generictools.settings import singleton_settings
 app_settings = singleton_settings()
 
 import matplotlib
