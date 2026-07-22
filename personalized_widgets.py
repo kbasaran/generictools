@@ -278,7 +278,36 @@ class UserForm(qtw.QWidget):
         if hasattr(obj, "add_elements_to_dict"):
             obj.add_elements_to_dict(self.interactable_widgets)
 
-    def update_form_values(self, values_new: dict):
+
+    def set_value(self, key, value_new):
+
+        logger.debug(f"Updating '{key}' with '{value_new}'/{type(value_new)}")
+        obj = self.interactable_widgets[key]
+
+        if hasattr(obj, "update_value_personalized"):
+            obj.update_value_personalized(key, value_new)
+
+        elif isinstance(obj, qtw.QLineEdit):
+            assert isinstance(value_new, str)
+            obj.setText(value_new)
+
+        elif isinstance(obj, qtw.QButtonGroup):
+            obj.button(value_new).setChecked(True)
+
+        elif isinstance(obj, qtw.QAbstractButton):
+            if isinstance(obj, qtw.QCheckBox):
+                obj.setChecked(value_new)
+            else:  # e.g. another type of button like QPushButton
+                raise ValueError(f"No value update can be done for '{type(obj)}'. Received value: {value_new}")
+
+        elif type(value_new) in [int, float]:
+            obj.setValue(value_new / obj.coeff_for_SI)
+
+        else:
+            obj.setValue(value_new)
+
+
+    def update_complete_form(self, values_new: dict):
         # Update the widget values from a dictionary
 
         # list of widgets that are not mentioned in argument values_new
@@ -290,30 +319,7 @@ class UserForm(qtw.QWidget):
         no_widget_for_dict_key = set()
 
         for key, value_new in values_new.items():
-            logger.debug(f"Updating '{key}' with '{value_new}'/{type(value_new)}")
-            obj = self.interactable_widgets[key]
-
-            if hasattr(obj, "update_value_personalized"):
-                obj.update_value_personalized(key, value_new)
-
-            elif isinstance(obj, qtw.QLineEdit):
-                assert isinstance(value_new, str)
-                obj.setText(value_new)
-
-            elif isinstance(obj, qtw.QButtonGroup):
-                obj.button(value_new).setChecked(True)
-            
-            elif isinstance(obj, qtw.QAbstractButton):            
-                if isinstance(obj, qtw.QCheckBox):
-                    obj.setChecked(value_new)
-                else:  # e.g. another type of button like QPushButton
-                    raise ValueError(f"No value update can be done for '{type(obj)}'. Received value: {value_new}")
-
-            elif type(value_new) in [int, float]:
-                obj.setValue(value_new / obj.coeff_for_SI)
-
-            else:
-                obj.setValue(value_new)
+            self.set_value(key, value_new)
 
             # finally
             no_dict_key_for_widget.discard(key)
