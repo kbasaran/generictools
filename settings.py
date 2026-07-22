@@ -104,7 +104,7 @@ class SettingsManager(qtc.QObject):
 
 
 def singleton_settings():
-    from config.linecraft_config import APP_DEFINITIONS, DEFAULTS
+    from config.app_config import APP_DEFINITIONS, DEFAULTS
     return SettingsManager(APP_DEFINITIONS, DEFAULTS)
 
 
