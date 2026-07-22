@@ -1,6 +1,6 @@
 from PySide6 import QtWidgets as qtw
 from pathlib import Path
-from config.linecraft_config import singleton_settings
+from config.sc_config import singleton_settings
 
 qapp = qtw.QApplication.instance()
 if not qapp:

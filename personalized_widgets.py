@@ -27,7 +27,7 @@ import numpy as np
 from generictools import signal_tools
 import pickle
 
-from config.linecraft_config import singleton_settings
+from config.sc_config import singleton_settings
 app_settings = singleton_settings()
 
 import logging
