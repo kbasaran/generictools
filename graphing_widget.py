@@ -122,15 +122,20 @@ class MatplotlibWidget(qtw.QWidget):
 
                 line.set_zorder(n_lines - i + zorder_offset)
 
-            if self.ax.has_data() and app_settings.get_value("show_legend"):
+            def remove_legend():
+                if legend := self.ax.get_legend():
+                    legend.remove()
+
+            if app_settings.get_value("show_legend") == False:
+                remove_legend()
+            elif self.ax.has_data():
                 self._place_ordered_legend()
-            elif legend := self.ax.get_legend():
-                legend.remove()
+            else:
+                remove_legend()
 
         if recalculate_limits:
             self.ax.yaxis.set_major_locator(plt.AutoLocator())
             self.ax.relim()
-
 
             if self.y_limits_policy["name"] is None:
                 self.ax.autoscale(enable=True, axis="both")
@@ -185,7 +190,7 @@ class MatplotlibWidget(qtw.QWidget):
 
         max_legend_size = app_settings.get_value("max_legend_size")
         if len(handles) > 0:
-            if max_legend_size > 0:
+            if (max_legend_size is not None) and (max_legend_size > 0):
                 handles = handles[:app_settings.get_value("max_legend_size")]
             self.ax.legend(handles=handles, title=title)
 
