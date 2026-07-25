@@ -16,6 +16,7 @@ __email__ = "kbasaran@gmail.com"
 # You should have received a copy of the GNU General Public
 # License along with Linecraft. If not, see <https://www.gnu.org/licenses/>
 
+import sys
 import traceback
 
 from PySide6 import QtWidgets as qtw
@@ -479,6 +480,10 @@ class ErrorHandler:
 
         message = error_msg_developer if self.developer else error_msg_short
         self.logger.warning(message)
+
+        # Always print the full traceback to the terminal, independent of the
+        # GUI message (which may be shortened when developer=False).
+        print(error_msg_developer, file=sys.stderr)
 
         parent = qtw.QApplication.activeWindow()  # None is a valid parent too
         ErrorPopup(parent, message)
