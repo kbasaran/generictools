@@ -19,11 +19,11 @@ __email__ = "kbasaran@gmail.com"
 import os
 import numpy as np
 import pandas as pd
-import acoustics as ac  # https://github.com/timmahrt/pyAcoustics
 import soundfile as sf
 from scipy import interpolate as intp
 from scipy.ndimage import gaussian_filter
 from scipy import signal as sig
+from scipy.signal import butter, sosfilt, sosfiltfilt
 from functools import lru_cache
 import time
 import multiprocessing
@@ -35,6 +35,118 @@ if __name__ == "__main__":
 else:
     logging.basicConfig(level=logging.WARNING)
     logger = logging.getLogger()
+
+
+# --------------------------------------------------------------------------- #
+# Self-contained replacements for the parts of the `acoustics` library
+# (https://github.com/python-acoustics/python-acoustics) that this module used
+# to depend on. Reimplemented here to remove the external dependency; each
+# function reproduces the behaviour of the original numerically.
+# --------------------------------------------------------------------------- #
+
+# Octave frequency ratio G (base-ten), IEC 61260-1:2014.
+_OCTAVE_FREQUENCY_RATIO = 10.0 ** (3.0 / 10.0)
+
+# Reference sound pressure, ISO/TR 25417:2007 (Pa).
+REFERENCE_PRESSURE = 2.0e-5
+
+# Nominal 1/3-octave center frequencies.
+# IEC 61672-1:2013 spans 10 Hz .. 20 kHz (used for pressure-based analysis).
+NOMINAL_THIRD_OCTAVE_CENTER_FREQUENCIES_IEC_61672 = np.array([
+    10.0, 12.5, 16.0, 20.0, 25.0, 31.5, 40.0, 50.0, 63.0, 80.0, 100.0, 125.0,
+    160.0, 200.0, 250.0, 315.0, 400.0, 500.0, 630.0, 800.0, 1000.0, 1250.0,
+    1600.0, 2000.0, 2500.0, 3150.0, 4000.0, 5000.0, 6300.0, 8000.0, 10000.0,
+    12500.0, 16000.0, 20000.0,
+])
+# IEC 61260-1:2014 spans 25 Hz .. 20 kHz.
+NOMINAL_THIRD_OCTAVE_CENTER_FREQUENCIES_IEC_61260 = np.array([
+    25.0, 31.5, 40.0, 50.0, 63.0, 80.0, 100.0, 125.0, 160.0, 200.0, 250.0,
+    315.0, 400.0, 500.0, 630.0, 800.0, 1000.0, 1250.0, 1600.0, 2000.0, 2500.0,
+    3150.0, 4000.0, 5000.0, 6300.0, 8000.0, 10000.0, 12500.0, 16000.0, 20000.0,
+])
+
+
+def _normalize(y):
+    """Normalize the power of `y` to that of a standard-normal white signal."""
+    return y * np.sqrt(1.0 / (np.abs(y) ** 2.0).mean())
+
+
+def white_noise(N, state=None):
+    """White noise: `N` samples drawn from a standard normal distribution."""
+    state = np.random.RandomState() if state is None else state
+    return state.randn(N)
+
+
+def pink_noise(N, state=None):
+    """Pink noise: power density decreasing 3 dB per octave, `N` samples."""
+    state = np.random.RandomState() if state is None else state
+    uneven = N % 2
+    X = state.randn(N // 2 + 1 + uneven) + 1j * state.randn(N // 2 + 1 + uneven)
+    S = np.sqrt(np.arange(len(X)) + 1.0)  # +1 to avoid divide by zero
+    y = np.fft.irfft(X / S).real
+    if uneven:
+        y = y[:-1]
+    return _normalize(y)
+
+
+def rms(x):
+    """Root mean square of signal `x`."""
+    return np.sqrt((np.abs(x) ** 2.0).mean())
+
+
+def highpass(signal, cutoff, fs, order=4, zero_phase=False):
+    """Butterworth high-pass filter (second-order sections)."""
+    sos = butter(order, cutoff / (fs / 2.0), btype='high', output='sos')
+    if zero_phase:
+        return sosfiltfilt(sos, signal, padlen=0)
+    return sosfilt(sos, signal)
+
+
+def lowpass(signal, cutoff, fs, order=4, zero_phase=False):
+    """Butterworth low-pass filter (second-order sections)."""
+    sos = butter(order, cutoff / (fs / 2.0), btype='low', output='sos')
+    if zero_phase:
+        return sosfiltfilt(sos, signal, padlen=0)
+    return sosfilt(sos, signal)
+
+
+def third_octave_levels(p, fs, frequencies):
+    """Sound pressure level per 1/3-octave band using the FFT power spectrum.
+
+    :param p: Instantaneous pressure signal.
+    :param fs: Sample frequency.
+    :param frequencies: Nominal 1/3-octave center frequencies of interest.
+    :returns: Level (dB re :data:`REFERENCE_PRESSURE`) for each band.
+
+    Reproduces ``acoustics.signal.third_octaves(...)[1]``.
+    """
+    G = _OCTAVE_FREQUENCY_RATIO
+    frequencies = np.asarray(frequencies, dtype=float)
+
+    # Band index -> exact center and band-edge frequencies (fraction=3).
+    idx = np.round(3.0 * np.log(frequencies / 1000.0) / np.log(G)).astype('int16')
+    center = 1000.0 * G ** (idx / 3.0)
+    lower = center * G ** (-1.0 / 6.0)
+    upper = center * G ** (+1.0 / 6.0)
+
+    # Single-sided power spectrum (squared RMS amplitudes).
+    N = p.shape[-1]
+    amplitude = np.fft.fft(p, n=N) / N
+    power = (amplitude * amplitude.conj()).real
+    power = np.fft.fftshift(power, axes=[-1])[..., N // 2:]
+    freqs = np.fft.fftshift(np.fft.fftfreq(N, 1.0 / fs))[..., N // 2:]
+    power = power * 2.0
+    power[..., 0] /= 2.0  # DC component should not be doubled.
+    if not N % 2:
+        power[..., -1] /= 2.0  # Neither should the Nyquist bin.
+
+    # Integrate narrowbands into 1/3-octave bands: lower < f_narrow <= upper.
+    mask = (lower[:, None] < freqs[None, :]) & (freqs[None, :] <= upper[:, None])
+    band_power = (mask * power[None, :]).sum(axis=-1)
+    return 10.0 * np.log10(band_power / REFERENCE_PRESSURE ** 2.0)
+
+
+# --------------------------------------------------------------------------- #
 
 
 class TestSignal():
@@ -92,25 +204,25 @@ class TestSignal():
 
     def generate_pink_noise(self, **kwargs):
         self.make_time_array(**kwargs)
-        self.time_sig = ac.generator.pink(len(self.t))
+        self.time_sig = pink_noise(len(self.t))
 
     def generate_white_noise(self, **kwargs):
         self.make_time_array(**kwargs)
-        self.time_sig = ac.generator.white(len(self.t))
+        self.time_sig = white_noise(len(self.t))
 
     def generate_IEC_noise(self, **kwargs):
         self.make_time_array(**kwargs)
-        time_sig = ac.generator.pink(len(self.t))
+        time_sig = pink_noise(len(self.t))
         """
         Do IEC 268 filtering (filter parameters fixed by standard)
         Three first-order high-pass filters at 12.9, 32.4, and 38.5 Hz
         Two first-order low-pass filters at 3900, and 9420 Hz
         """
-        time_sig = ac.signal.highpass(time_sig, 12.9, self.FS, order=1)
-        time_sig = ac.signal.highpass(time_sig, 32.4, self.FS, order=1)
-        time_sig = ac.signal.highpass(time_sig, 38.5, self.FS, order=1)
-        time_sig = ac.signal.lowpass(time_sig, 3900, self.FS, order=1)
-        time_sig = ac.signal.lowpass(time_sig, 9420, self.FS, order=1)
+        time_sig = highpass(time_sig, 12.9, self.FS, order=1)
+        time_sig = highpass(time_sig, 32.4, self.FS, order=1)
+        time_sig = highpass(time_sig, 38.5, self.FS, order=1)
+        time_sig = lowpass(time_sig, 3900, self.FS, order=1)
+        time_sig = lowpass(time_sig, 9420, self.FS, order=1)
         self.time_sig = time_sig
 
     def generate_sine(self, **kwargs):
@@ -174,7 +286,7 @@ class TestSignal():
             self.peak = self.neg_peak
         else:
             self.peak = self.pos_peak
-        self.RMS = ac.signal.rms(self.time_sig)
+        self.RMS = rms(self.time_sig)
         self.CF = np.abs(self.peak) / self.RMS
         self.CFdB = 20 * np.log10(self.CF)
         self.mean = np.average(self.time_sig)
@@ -273,7 +385,7 @@ class TestSignal():
             self.t = np.arange(self.T * self.FS) / self.FS
 
     def normalize(self, **kwargs):
-        self.time_sig = self.time_sig / ac.signal.rms(self.time_sig) * kwargs.get("set_RMS", 1)
+        self.time_sig = self.time_sig / rms(self.time_sig) * kwargs.get("set_RMS", 1)
 
     def apply_filters(self, **kwargs):
         """
@@ -285,17 +397,17 @@ class TestSignal():
             frequency = filter["frequency"]
             order = filter["order"]
             if filt_type == "HP":
-                self.time_sig = ac.signal.highpass(self.time_sig, frequency,
-                                                   self.FS, order, zero_phase=False)
+                self.time_sig = highpass(self.time_sig, frequency,
+                                         self.FS, order, zero_phase=False)
             elif filt_type == "LP":
-                self.time_sig = ac.signal.lowpass(self.time_sig, frequency,
-                                                  self.FS, order, zero_phase=False)
+                self.time_sig = lowpass(self.time_sig, frequency,
+                                        self.FS, order, zero_phase=False)
             elif filt_type == "HP (zero phase)":
-                self.time_sig = ac.signal.highpass(self.time_sig, frequency,
-                                                   self.FS, order // 2, zero_phase=True)  # workaround for bug
+                self.time_sig = highpass(self.time_sig, frequency,
+                                         self.FS, order // 2, zero_phase=True)  # workaround for bug
             elif filt_type == "LP (zero phase)":
-                self.time_sig = ac.signal.lowpass(self.time_sig, frequency,
-                                                  self.FS, order // 2, zero_phase=True)  # workaround for bug
+                self.time_sig = lowpass(self.time_sig, frequency,
+                                        self.FS, order // 2, zero_phase=True)  # workaround for bug
             elif filt_type == "Disabled":
                 pass
             else:
@@ -806,7 +918,7 @@ def check_level_over_time(y, FS, window_duration: int = 200, step_duration: int 
     Ay = []
     i_start, i_end = 0, len(win)
     while i_end <= len(y):  # not the best Python code
-        val = ac.signal.rms(y[i_start:i_end])
+        val = rms(y[i_start:i_end])
         Ay.append(val)
         i_start += hop
         i_end += hop
@@ -883,9 +995,9 @@ def convolve_with_signal(ir, my_sig, ir_FS=None, my_sig_FS=None, trim_zeros=True
 
 
 def calculate_third_oct_power_from_pressure(p, FS):
-    third_oct_freqs = ac.standards.iec_61672_1_2013.NOMINAL_THIRD_OCTAVE_CENTER_FREQUENCIES
+    third_oct_freqs = NOMINAL_THIRD_OCTAVE_CENTER_FREQUENCIES_IEC_61672
 
-    return third_oct_freqs, ac.signal.third_octaves(p, FS, frequencies=third_oct_freqs)[1]
+    return third_oct_freqs, third_octave_levels(p, FS, third_oct_freqs)
 
 
 @lru_cache
@@ -1185,12 +1297,12 @@ def calculate_graph_limits(y_arrays, multiple=5, clearance_up_down=(2, 1)) -> tu
 
 
 def third_octave_power(sig, FS, center_frequencies):
-    return tuple(10 ** (ac.signal.third_octaves(sig, FS, frequencies=center_frequencies)[1] / 10))
+    return tuple(10 ** (third_octave_levels(sig, FS, center_frequencies) / 10))
 
 
 def calculate_3rd_octave_bands(time_sig: np.array, FS: int, multiprocess=True) -> tuple:
     start_time = time.perf_counter()
-    center_frequencies = ac.standards.iec_61260_1_2014.NOMINAL_THIRD_OCTAVE_CENTER_FREQUENCIES
+    center_frequencies = NOMINAL_THIRD_OCTAVE_CENTER_FREQUENCIES_IEC_61260
 
     n_arrays = len(time_sig) // (FS * 20) + 1  # split the signal into 20 second chunks
     logging.debug(f"Calculating octave bands by dividing {len(time_sig)} points signal into {n_arrays} pieces.")
