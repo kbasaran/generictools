@@ -171,6 +171,9 @@ class MatplotlibWidget(qtw.QWidget):
                 y_min_max = (kwargs["min"], kwargs["max"])
                 self.ax.set_ylim(y_min_max)
 
+            # ---- x-axis follows the configured frequency range, not matplotlib autoscale
+            self.ax.set_xlim(app_settings.get_value("f_min"), app_settings.get_value("f_max"))
+
         self._setup_grid()
         self.canvas.draw_idle()
         logger.debug(f"Graph updated. {len(self.ax.get_lines())} lines."
