@@ -9,6 +9,7 @@ from matplotlib.backends.backend_qtagg import (
     FigureCanvas, NavigationToolbar2QT as NavigationToolbar)
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
+from matplotlib.ticker import LogLocator, FuncFormatter, NullFormatter
 
 from generictools.settings import singleton_settings
 app_settings = singleton_settings()
@@ -82,6 +83,47 @@ class MatplotlibWidget(qtw.QWidget):
                 self.ax.grid(visible=True, which="major", axis='both')
             if "inor" in app_settings.get_value("graph_grids"):
                 self.ax.grid(visible=True, which="minor", axis='both')
+
+    def _minor_grid_active(self) -> bool:
+        # Whether the minor grid is currently shown -- mirrors _setup_grid's logic.
+        setting = app_settings.get_value("graph_grids")
+        if setting in ["Style default", "default"]:
+            return bool(plt.rcParams["axes.grid"]) and plt.rcParams["axes.grid.which"] in ("minor", "both")
+        return "inor" in setting
+
+    @staticmethod
+    def _format_freq_tick(value, _pos=None) -> str:
+        # k suffix for >= 1000 (1k, 2k, 5k, 10k, 20k); plain otherwise (10, 20, 50, ...).
+        if value >= 1000:
+            return f"{value / 1000:g}k"
+        return f"{value:g}"
+
+    def _format_minor_freq_tick(self, value, _pos=None) -> str:
+        # Dense minor ticks (2..9 * 10**n) draw the fine gridlines, but only the
+        # 2*10**n and 5*10**n ones are labelled.
+        mantissa = round(value / 10.0 ** np.floor(np.log10(value)))
+        if mantissa in (2, 5):
+            return self._format_freq_tick(value)
+        return ""
+
+    def _setup_xaxis_ticks(self):
+        # Frequency (log) x-axis ticks:
+        #   major = decades 10**n                     (always labelled)
+        #   minor = 2..9 * 10**n  -> dense minor gridlines, but ONLY the 2*10**n and
+        #           5*10**n ones get a label, and only when the minor grid is shown.
+        # LogLocator intelligently prunes ticks over a wide span (often down to ~9),
+        # so numticks is deliberately left unset.
+        self.ax.set_xscale("log")
+        self.ax.set_xlim(app_settings.get_value("f_min"), app_settings.get_value("f_max"))
+
+        self.ax.xaxis.set_major_locator(LogLocator(base=10.0, subs=(1.0,)))
+        self.ax.xaxis.set_minor_locator(LogLocator(base=10.0, subs=(2, 3, 4, 5, 6, 7, 8, 9)))
+
+        self.ax.xaxis.set_major_formatter(FuncFormatter(self._format_freq_tick))
+        if self._minor_grid_active():
+            self.ax.xaxis.set_minor_formatter(FuncFormatter(self._format_minor_freq_tick))
+        else:
+            self.ax.xaxis.set_minor_formatter(NullFormatter())
     
     def set_y_limits_policy(self, policy_name, **kwargs):
         self.y_limits_policy = {"name": policy_name,
@@ -171,8 +213,11 @@ class MatplotlibWidget(qtw.QWidget):
                 y_min_max = (kwargs["min"], kwargs["max"])
                 self.ax.set_ylim(y_min_max)
 
-            # ---- x-axis follows the configured frequency range, not matplotlib autoscale
-            self.ax.set_xlim(app_settings.get_value("f_min"), app_settings.get_value("f_max"))
+            # ---- x-axis: fixed to the configured frequency range with custom
+            # decade / 1-2-5 tick placement (see _setup_xaxis_ticks). Done here,
+            # after the lines were added, because semilogx() resets the x scale
+            # (and thus its locators/formatters) each time a curve is drawn.
+            self._setup_xaxis_ticks()
 
         self._setup_grid()
         self.canvas.draw_idle()
