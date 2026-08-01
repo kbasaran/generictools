@@ -133,6 +133,14 @@ class MatplotlibWidget(qtw.QWidget):
     def set_title(self, title):
         self.ax.set_title(title)
 
+    def set_xlabel(self, xlabel, **kwargs):
+        kwargs.setdefault("fontsize", "small")
+        self.ax.set_xlabel(xlabel, **kwargs)
+
+    def set_ylabel(self, ylabel, **kwargs):
+        kwargs.setdefault("fontsize", "small")
+        self.ax.set_ylabel(ylabel, **kwargs)
+
     @qtc.Slot()
     def update_figure(self, recalculate_limits=True, update_legend=True):
         start_time = time.perf_counter()
