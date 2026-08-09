@@ -7,7 +7,6 @@ Created on Tue Feb 18 21:38:51 2025
 # source
 # https://pywavelets.readthedocs.io/en/latest/ref/cwt.html#continuous-wavelet-transform-cwt
 
-import pyperclip
 import numpy as np
 import pywt
 import matplotlib.pyplot as plt
@@ -30,8 +29,6 @@ def parse_curve_copied_from_Klippel(klippel_curve_string):
 # ---- get curve
 with open("test_klippel_mic_signal.txt", "r") as file:
     curve_copied_from_Klippel = file.read()
-
-# curve_copied_from_Klippel = pyperclip.paste()
 
 # ---- parse
 xy = parse_curve_copied_from_Klippel(curve_copied_from_Klippel)

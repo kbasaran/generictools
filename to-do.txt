@@ -1,1 +1,2 @@
 Use np.loadtxt for reading imported strings. it will be better code like that.
+make x axis label smaller

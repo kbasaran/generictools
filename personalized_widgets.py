@@ -16,6 +16,7 @@ __email__ = "kbasaran@gmail.com"
 # You should have received a copy of the GNU General Public
 # License along with Linecraft. If not, see <https://www.gnu.org/licenses/>
 
+import sys
 import traceback
 
 from PySide6 import QtWidgets as qtw
@@ -27,7 +28,7 @@ import numpy as np
 from generictools import signal_tools
 import pickle
 
-from config.app_config import singleton_settings
+from generictools.settings import singleton_settings
 app_settings = singleton_settings()
 
 import logging
@@ -219,9 +220,11 @@ class ComboBox(qtw.QComboBox):
         if isinstance(value, str):
             in_current_text = value
             in_current_data = None
-        else:
+        elif isinstance(value, dict):
             in_current_text = value["current_text"]
             in_current_data = value.get("current_data", None)
+        else:
+            raise ValueError(f"Cannot set combobox value with data type {type(value)}")
 
         existing_item_index = self.findText(in_current_text)
 
@@ -276,7 +279,34 @@ class UserForm(qtw.QWidget):
         if hasattr(obj, "add_elements_to_dict"):
             obj.add_elements_to_dict(self.interactable_widgets)
 
-    def update_form_values(self, values_new: dict):
+    def set_value(self, key, value_new):
+
+        logger.debug(f"Updating '{key}' with '{value_new}'/{type(value_new)}")
+        obj = self.interactable_widgets[key]
+
+        if hasattr(obj, "update_value_personalized"):
+            obj.update_value_personalized(key, value_new)
+
+        elif isinstance(obj, qtw.QLineEdit):
+            assert isinstance(value_new, str)
+            obj.setText(value_new)
+
+        elif isinstance(obj, qtw.QButtonGroup):
+            obj.button(value_new).setChecked(True)
+
+        elif isinstance(obj, qtw.QAbstractButton):
+            if isinstance(obj, qtw.QCheckBox):
+                obj.setChecked(value_new)
+            else:  # e.g. another type of button like QPushButton
+                raise ValueError(f"No value update can be done for '{type(obj)}'. Received value: {value_new}")
+
+        elif type(value_new) in [int, float]:
+            obj.setValue(value_new / obj.coeff_for_SI)
+
+        else:
+            obj.setValue(value_new)
+
+    def update_complete_form(self, values_new: dict):
         # Update the widget values from a dictionary
 
         # list of widgets that are not mentioned in argument values_new
@@ -288,30 +318,7 @@ class UserForm(qtw.QWidget):
         no_widget_for_dict_key = set()
 
         for key, value_new in values_new.items():
-            logger.debug(f"Updating '{key}' with '{value_new}'/{type(value_new)}")
-            obj = self.interactable_widgets[key]
-
-            if hasattr(obj, "update_value_personalized"):
-                obj.update_value_personalized(key, value_new)
-
-            elif isinstance(obj, qtw.QLineEdit):
-                assert isinstance(value_new, str)
-                obj.setText(value_new)
-
-            elif isinstance(obj, qtw.QButtonGroup):
-                obj.button(value_new).setChecked(True)
-            
-            elif isinstance(obj, qtw.QAbstractButton):            
-                if isinstance(obj, qtw.QCheckBox):
-                    obj.setChecked(value_new)
-                else:  # e.g. another type of button like QPushButton
-                    raise ValueError(f"No value update can be done for '{type(obj)}'. Received value: {value_new}")
-
-            elif type(value_new) in [int, float]:
-                obj.setValue(value_new / obj.coeff_for_SI)
-
-            else:
-                obj.setValue(value_new)
+            self.set_value(key, value_new)
 
             # finally
             no_dict_key_for_widget.discard(key)
@@ -454,37 +461,32 @@ class ErrorPopup(qtw.QMessageBox):
 
 
 class ErrorHandler:
-    def __init__(self, parent, logger, developer=False):
-        self.developer = developer
-        self.parent = parent
+    """Global exception handler: logs the error and shows a pop-up.
+
+    The pop-up's parent widget is resolved at error time via
+    QApplication.activeWindow(), rather than fixed at construction.
+    This works whether zero, one, or several windows are open, and
+    means we never need to pass QApplication itself as a widget parent.
+    """
+
+    def __init__(self, logger, developer=False):
         self.logger = logger
+        self.developer = developer
 
     def excepthook(self, etype, value, tb):
-        error_msg_developer = ''.join(traceback.format_exception(etype, value, tb))
         error_info = traceback.format_exception(etype, value, tb)
+        error_msg_developer = "".join(error_info)
+        error_msg_short = error_info[-1] if len(error_info) > 1 else error_msg_developer
 
-        if isinstance(error_info, list) and len(error_info) > 2:
-            error_msg_short = error_info[-1]
-            # bad solution
-        else:
-            error_msg_short = error_info
+        message = error_msg_developer if self.developer else error_msg_short
+        self.logger.warning(message)
 
-        if self.developer:
-            self.logger.warning(error_msg_developer)
-            ErrorPopup(self.parent, error_msg_developer)
-        else:
-            self.logger.warning(error_msg_short)
-            ErrorPopup(self.parent, error_msg_short)
+        # Always print the full traceback to the terminal, independent of the
+        # GUI message (which may be shortened when developer=False).
+        print(error_msg_developer, file=sys.stderr)
 
-
-class ErrorHandlerUser(ErrorHandler):
-    def __init__(self, parent, logger):
-        super().__init__(parent, logger, developer=False)
-
-
-class ErrorHandlerDeveloper(ErrorHandler):
-    def __init__(self, parent, logger):
-        super().__init__(parent, logger, developer=True)
+        parent = qtw.QApplication.activeWindow()  # None is a valid parent too
+        ErrorPopup(parent, message)
 
 
 class LoadSaveEngine:
