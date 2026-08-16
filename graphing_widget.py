@@ -113,8 +113,9 @@ class MatplotlibWidget(qtw.QWidget):
         #           5*10**n ones get a label, and only when the minor grid is shown.
         # LogLocator intelligently prunes ticks over a wide span (often down to ~9),
         # so numticks is deliberately left unset.
+        # Only the scale, locators and formatters are set here; the x limits belong
+        # to the limit recalculation in update_figure.
         self.ax.set_xscale("log")
-        self.ax.set_xlim(app_settings.get_value("f_min"), app_settings.get_value("f_max"))
 
         self.ax.xaxis.set_major_locator(LogLocator(base=10.0, subs=(1.0,)))
         self.ax.xaxis.set_minor_locator(LogLocator(base=10.0, subs=(2, 3, 4, 5, 6, 7, 8, 9)))
@@ -213,11 +214,14 @@ class MatplotlibWidget(qtw.QWidget):
                 y_min_max = (kwargs["min"], kwargs["max"])
                 self.ax.set_ylim(y_min_max)
 
-            # ---- x-axis: fixed to the configured frequency range with custom
-            # decade / 1-2-5 tick placement (see _setup_xaxis_ticks). Done here,
-            # after the lines were added, because semilogx() resets the x scale
-            # (and thus its locators/formatters) each time a curve is drawn.
-            self._setup_xaxis_ticks()
+            # ---- x-axis: fixed to the configured frequency range
+            self.ax.set_xlim(app_settings.get_value("f_min"), app_settings.get_value("f_max"))
+
+        # ---- x-axis ticks: custom decade / 1-2-5 tick placement (see
+        # _setup_xaxis_ticks). Reapplied on every update, after the lines were added,
+        # because semilogx() resets the x scale (and thus its locators/formatters)
+        # each time a curve is drawn.
+        self._setup_xaxis_ticks()
 
         self._setup_grid()
         self.canvas.draw_idle()
