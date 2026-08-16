@@ -392,8 +392,11 @@ class MatplotlibWidget(qtw.QWidget):
         Line2D's in matplotlib graph are not sorted in the same order with curves in Qlist widget.
         This function returns each line2D as a list, ordered as in Qlist widget.
         """
+        # get_lines() builds a new list on each call, so it is looked up once here
+        # instead of once per index. Matters when hundreds of curves are imported.
+        lines = self.ax.get_lines()
         line_indexes_in_qlist_order = self._get_line_indexes_in_qlist_order()
-        return [self.ax.get_lines()[i] for i in line_indexes_in_qlist_order]
+        return [lines[i] for i in line_indexes_in_qlist_order]
 
     @qtc.Slot()
     def get_visible_lines_in_qlist_order(self):
