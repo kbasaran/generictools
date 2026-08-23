@@ -44,6 +44,9 @@ class MatplotlibWidget(qtw.QWidget):
         layout = qtw.QVBoxLayout(self)
         self._ref_index_x_y = None
         self._qlistwidget_indexes_of_lines = np.array([], dtype=int)
+        # Policy that an active reference curve is overriding. Restored when the
+        # reference curve is deactivated. See activate_reference_curve.
+        self._y_limits_policy_before_reference = None
         self.set_y_limits_policy(None)
 
         # ---- Set the desired style
@@ -338,6 +341,9 @@ class MatplotlibWidget(qtw.QWidget):
                 line2d.set_ydata(new_xy[1])
 
             self._ref_index_x_y = [i_ref_curve, ref_x, ref_y]
+            # A reference curve overrides the y limits policy for as long as it is
+            # active. Remember the current one to restore it on deactivation.
+            self._y_limits_policy_before_reference = self.y_limits_policy
             self.set_y_limits_policy("reference_curve")
             self.update_figure()
             self.signal_reference_curve_activated.emit(i_ref_curve)
@@ -365,7 +371,11 @@ class MatplotlibWidget(qtw.QWidget):
                 # line2d.set_ydata(y + ref_y_intp)
 
             self._ref_index_x_y = None
-            self.set_y_limits_policy("SPL")
+            # Give back the policy the reference curve was overriding. There is none
+            # if the widget is used without anyone setting one; autoscale then.
+            policy = self._y_limits_policy_before_reference or {"name": None, "kwargs": {}}
+            self._y_limits_policy_before_reference = None
+            self.set_y_limits_policy(policy["name"], **policy["kwargs"])
             self.update_figure()
             self.signal_reference_curve_deactivated.emit()
         except RuntimeError as e:
