@@ -83,7 +83,13 @@ def pink_noise(N, state=None):
     uneven = N % 2
     X = state.randn(N // 2 + 1 + uneven) + 1j * state.randn(N // 2 + 1 + uneven)
     S = np.sqrt(np.arange(len(X)) + 1.0)  # +1 to avoid divide by zero
-    y = np.fft.irfft(X / S).real
+    X = X / S
+    # The `+1` above keeps bin 0 out of the division by zero, but as a side effect
+    # weights DC by 1/sqrt(1) = 1.0 -- the largest weight of any bin. That left every
+    # realization with a random DC offset (std ~0.11 of RMS, occasionally beyond 0.25),
+    # which displaces a driver's voice coil without producing any sound. Drop the bin.
+    X[0] = 0.0
+    y = np.fft.irfft(X).real
     if uneven:
         y = y[:-1]
     return _normalize(y)
