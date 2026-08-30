@@ -47,8 +47,12 @@ class MatplotlibWidget(qtw.QWidget):
         self.set_y_limits_policy(None)
 
         # ---- Set the desired style
+        # No style configured means the application does not care; fall back to
+        # matplotlib's own defaults rather than refusing to build the widget.
         desired_style = app_settings.get_value("matplotlib_style")
-        if desired_style in plt.style.available:
+        if desired_style is None:
+            plt.style.use("default")
+        elif desired_style in plt.style.available:
             plt.style.use(desired_style)
         else:
             raise KeyError(f"Desired style '{desired_style}' not available.")
