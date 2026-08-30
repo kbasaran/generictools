@@ -32,6 +32,10 @@ class MatplotlibWidget(qtw.QWidget):
     signal_good_beep = qtc.Signal()
     signal_bad_beep = qtc.Signal()
     available_styles = list(plt.style.available)
+    # Used when the application leaves the "graph_grids" setting undefined.
+    default_graph_grids = "Major and minor"
+    # Used when the application leaves the "show_legend" setting undefined.
+    default_show_legend = True
 
     def print_line_states(self):
         print()
@@ -45,6 +49,7 @@ class MatplotlibWidget(qtw.QWidget):
         self._ref_index_x_y = None
         self._qlistwidget_indexes_of_lines = np.array([], dtype=int)
         self.set_y_limits_policy(None)
+        self.set_x_limits_policy(None)
 
         # ---- Set the desired style
         # No style configured means the application does not care; fall back to
@@ -72,25 +77,36 @@ class MatplotlibWidget(qtw.QWidget):
         self.ax = self.canvas.figure.subplots()
         self._setup_grid()
 
+    def _graph_grids(self) -> str:
+        "The active grid setting. Falls back to the class default when unset."
+        setting = app_settings.get_value("graph_grids")
+        return self.default_graph_grids if setting is None else setting
+
+    def _show_legend(self) -> bool:
+        "Whether the legend is drawn. Falls back to the class default when unset."
+        setting = app_settings.get_value("show_legend")
+        return self.default_show_legend if setting is None else bool(setting)
+
     @qtc.Slot()
     def _setup_grid(self):
         self.ax.grid(visible=False, which="both", axis='both')
+        setting = self._graph_grids()
 
-        if app_settings.get_value("graph_grids") in ["Style default", "default"]:
+        if setting in ["Style default", "default"]:
             visible = plt.rcParams["axes.grid"]  # boolean
             axis = plt.rcParams["axes.grid.axis"]
             which = plt.rcParams["axes.grid.which"]
             self.ax.grid(visible=visible, which=which, axis=axis)
 
         else:
-            if "ajor" in app_settings.get_value("graph_grids"):
+            if "ajor" in setting:
                 self.ax.grid(visible=True, which="major", axis='both')
-            if "inor" in app_settings.get_value("graph_grids"):
+            if "inor" in setting:
                 self.ax.grid(visible=True, which="minor", axis='both')
 
     def _minor_grid_active(self) -> bool:
         # Whether the minor grid is currently shown -- mirrors _setup_grid's logic.
-        setting = app_settings.get_value("graph_grids")
+        setting = self._graph_grids()
         if setting in ["Style default", "default"]:
             return bool(plt.rcParams["axes.grid"]) and plt.rcParams["axes.grid.which"] in ("minor", "both")
         return "inor" in setting
@@ -118,7 +134,7 @@ class MatplotlibWidget(qtw.QWidget):
         # LogLocator intelligently prunes ticks over a wide span (often down to ~9),
         # so numticks is deliberately left unset.
         self.ax.set_xscale("log")
-        self.ax.set_xlim(app_settings.get_value("f_min"), app_settings.get_value("f_max"))
+        self.ax.set_xlim(*self._x_limits())
 
         self.ax.xaxis.set_major_locator(LogLocator(base=10.0, subs=(1.0,)))
         self.ax.xaxis.set_minor_locator(LogLocator(base=10.0, subs=(2, 3, 4, 5, 6, 7, 8, 9)))
@@ -133,6 +149,30 @@ class MatplotlibWidget(qtw.QWidget):
         self.y_limits_policy = {"name": policy_name,
                                 "kwargs": kwargs,
                                 }
+
+    def set_x_limits_policy(self, policy_name, **kwargs):
+        """Set how the limits of the x axis are chosen.
+
+        None    -- use the "f_min" and "f_max" application settings.
+        "fixed" -- use the "min" and "max" keyword arguments. Either one may be
+                   left out, in which case the application setting is used for
+                   that end of the axis.
+        """
+        self.x_limits_policy = {"name": policy_name,
+                                "kwargs": kwargs,
+                                }
+
+    def _x_limits(self) -> tuple:
+        "Resolve the x axis limits for the active policy."
+        x_min = app_settings.get_value("f_min")
+        x_max = app_settings.get_value("f_max")
+
+        if self.x_limits_policy["name"] == "fixed":
+            kwargs = self.x_limits_policy["kwargs"]
+            x_min = kwargs.get("min", x_min)
+            x_max = kwargs.get("max", x_max)
+
+        return x_min, x_max
 
     def set_title(self, title):
         self.ax.set_title(title)
@@ -180,7 +220,7 @@ class MatplotlibWidget(qtw.QWidget):
                 if legend := self.ax.get_legend():
                     legend.remove()
 
-            if app_settings.get_value("show_legend") == False:
+            if not self._show_legend():
                 remove_legend()
             elif self.ax.has_data():
                 self._place_ordered_legend()
