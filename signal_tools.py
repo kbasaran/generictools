@@ -83,7 +83,13 @@ def pink_noise(N, state=None):
     uneven = N % 2
     X = state.randn(N // 2 + 1 + uneven) + 1j * state.randn(N // 2 + 1 + uneven)
     S = np.sqrt(np.arange(len(X)) + 1.0)  # +1 to avoid divide by zero
-    y = np.fft.irfft(X / S).real
+    X = X / S
+    # The `+1` above keeps bin 0 out of the division by zero, but as a side effect
+    # weights DC by 1/sqrt(1) = 1.0 -- the largest weight of any bin. That left every
+    # realization with a random DC offset (std ~0.11 of RMS, occasionally beyond 0.25),
+    # which displaces a driver's voice coil without producing any sound. Drop the bin.
+    X[0] = 0.0
+    y = np.fft.irfft(X).real
     if uneven:
         y = y[:-1]
     return _normalize(y)
@@ -297,10 +303,10 @@ class TestSignal():
 
         self.analysis += (f"\nCrest Factor: {self.CF:.4g}x, {self.CFdB:.2f}dB"
                           + f"\nPositive and negative peaks: {self.pos_peak:.5g}, {self.neg_peak:.5g}"
-                          + f"\nMean (DC), RMS: {self.mean:.5g}, {self.RMS:.5g}"
+                          + f"\nMean (DC): {self.mean:.5g}    RMS: {self.RMS:.5g}"
                           + f"\nSample rate: {self.FS} Hz"
                           + f"\nDuration: {self.T:.2f} seconds"
-                          + f"\nSize in memory, data type: {self.time_sig.nbytes / 1_000_000:.2f} MB, {self.time_sig.dtype}"
+                          + f"\nSize in memory: {self.time_sig.nbytes / 1_000_000:.2f} MB    Data type: {self.time_sig.dtype}"
                           + f"\nChannel count: {self.channel_count()}"
                           )
 
