@@ -157,26 +157,53 @@ class MatplotlibWidget(qtw.QWidget):
     def set_x_limits_policy(self, policy_name, **kwargs):
         """Set how the limits of the x axis are chosen.
 
-        None    -- use the "f_min" and "f_max" application settings.
+        The x axis is independent of the y limits policy; neither one affects the
+        other.
+
+        None    -- autoscale to the data.
         "fixed" -- use the "min" and "max" keyword arguments. Either one may be
-                   left out, in which case the application setting is used for
-                   that end of the axis.
+                   left out, in which case the application setting ("f_min" /
+                   "f_max") is used for that end of the axis. An end that neither
+                   of the two defines keeps autoscaling, so a policy can pin one
+                   end and let the other follow the data.
         """
         self.x_limits_policy = {"name": policy_name,
                                 "kwargs": kwargs,
                                 }
 
     def _x_limits(self) -> tuple:
-        "Resolve the x axis limits for the active policy."
-        x_min = app_settings.get_value("f_min")
-        x_max = app_settings.get_value("f_max")
+        """Resolve the x axis limits for the active policy.
 
-        if self.x_limits_policy["name"] == "fixed":
-            kwargs = self.x_limits_policy["kwargs"]
-            x_min = kwargs.get("min", x_min)
-            x_max = kwargs.get("max", x_max)
+        None for an end means that end is left to autoscale.
+        """
+        if self.x_limits_policy["name"] != "fixed":
+            return None, None
+
+        kwargs = self.x_limits_policy["kwargs"]
+        x_min = kwargs.get("min", app_settings.get_value("f_min"))
+        x_max = kwargs.get("max", app_settings.get_value("f_max"))
 
         return x_min, x_max
+
+    def _apply_x_limits(self):
+        "Apply the active x limits policy to the axes."
+        x_min, x_max = self._x_limits()
+
+        if x_min is None and x_max is None:
+            self.ax.autoscale(enable=True, axis="x")
+            return
+
+        # set_xlim switches x autoscaling off, which would freeze the free end of a
+        # one-sided policy at whatever it happened to be. Autoscale first and read
+        # the result back, so that end still follows the data -- with the margins
+        # matplotlib would have given it.
+        self.ax.autoscale(enable=True, axis="x")
+        self.ax.autoscale_view(scalex=True, scaley=False)
+        auto_min, auto_max = self.ax.get_xlim()
+
+        self.ax.set_xlim(auto_min if x_min is None else x_min,
+                         auto_max if x_max is None else x_max,
+                         )
 
     def set_title(self, title):
         self.ax.set_title(title)
@@ -236,7 +263,7 @@ class MatplotlibWidget(qtw.QWidget):
             self.ax.relim()
 
             if self.y_limits_policy["name"] is None:
-                self.ax.autoscale(enable=True, axis="both")
+                self.ax.autoscale(enable=True, axis="y")
 
             if self.y_limits_policy["name"] == "reference_curve":
                 y_max = np.max([np.max(np.abs(line.get_ydata())) for line in self.ax.get_lines()])
@@ -269,8 +296,8 @@ class MatplotlibWidget(qtw.QWidget):
                 y_min_max = (kwargs["min"], kwargs["max"])
                 self.ax.set_ylim(y_min_max)
 
-            # ---- x-axis: limits from the active x limits policy
-            self.ax.set_xlim(*self._x_limits())
+            # ---- x-axis: driven by its own policy, independently of the y policy above
+            self._apply_x_limits()
 
         # ---- x-axis ticks: custom decade / 1-2-5 tick placement (see
         # _setup_xaxis_ticks). Reapplied on every update, after the lines were added,
