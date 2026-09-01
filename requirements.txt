@@ -4,3 +4,4 @@ soundfile
 sounddevice
 matplotlib
 scipy
+pandas
